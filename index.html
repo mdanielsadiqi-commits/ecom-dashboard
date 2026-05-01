@@ -8,11 +8,11 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{background:#0a0a0a;color:#f0f0f0;font-family:Georgia,serif;min-height:100vh}
 button{cursor:pointer;font-family:Georgia,serif;border:none;outline:none}
-input,textarea,select{font-family:Georgia,serif;outline:none}
+input,textarea{font-family:Georgia,serif;outline:none}
 .page{padding:16px 16px 100px;display:flex;flex-direction:column;gap:12px}
 .nav{background:#111;border-bottom:1px solid #222;padding:12px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:99}
 .bnav{background:#0a0a0a;border-top:1px solid #222;padding:10px 16px;display:flex;gap:8px;position:fixed;bottom:0;left:0;right:0;z-index:99}
-.btab{flex:1;padding:8px 4px;border-radius:12px;font-size:11px;background:none;color:#555;border:1px solid transparent;text-align:center}
+.btab{flex:1;padding:9px 4px;border-radius:12px;font-size:11px;background:none;color:#555;border:1px solid transparent;text-align:center}
 .btab.active{background:#1a1a1a;color:#f0f0f0;border-color:#333}
 .nbtn{font-size:12px;padding:6px 12px;border-radius:20px;color:#888;background:#1a1a1a;border:1px solid #2a2a2a}
 .card{background:#111;border:1px solid #222;border-radius:16px;padding:16px}
@@ -27,25 +27,18 @@ input,textarea,select{font-family:Georgia,serif;outline:none}
 .clinput{background:#0a0a0a;border:1px solid #2a2a2a;border-radius:8px;padding:8px 10px;color:#e8e8e8;font-size:13px;flex:1}
 .bc{width:44px;height:44px;border-radius:50%;background:#1a1a1a;border:1px solid #2a2a2a;color:#e8e8e8;font-size:22px;flex-shrink:0;-webkit-user-select:none;user-select:none;display:flex;align-items:center;justify-content:center}
 .bonus{background:#f59e0b22;color:#f59e0b;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:600}
-.sync-dot{width:7px;height:7px;border-radius:50%;background:#34d399;display:inline-block;margin-right:4px}
-.sync-dot.syncing{background:#f59e0b}
-.star{color:#f59e0b;font-size:16px;cursor:pointer}
-.star.off{color:#333}
 .finput{background:#0a0a0a;border:1px solid #2a2a2a;border-radius:8px;padding:7px 10px;color:#e8e8e8;font-size:13px;width:100%}
 .pill{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:600;display:inline-block}
-.mood-btn{flex:1;padding:8px;border-radius:12px;font-size:18px;background:#1a1a1a;border:1px solid #222}
-.mood-btn.selected{border-color:#60a5fa;background:#60a5fa18}
+.sec-divider{font-size:12px;font-weight:700;color:#888;padding:8px 0 4px;border-bottom:1px solid #1a1a1a;margin-bottom:8px}
 </style>
 </head>
 <body>
 <div id="app">Laedt...</div>
 <div class="bnav" id="bnav" style="display:none">
-  <button class="btab" id="tab_day" onclick="setTab('day')">Tag</button>
-  <button class="btab" id="tab_products" onclick="setTab('products')">Produkte</button>
-  <button class="btab" id="tab_pipeline" onclick="setTab('pipeline')">Pipeline</button>
-  <button class="btab" id="tab_overview" onclick="setTab('overview')">Uebersicht</button>
+  <button class="btab" id="tab_day" onclick="setTab('day')">&#128197; Tag</button>
+  <button class="btab" id="tab_products" onclick="setTab('products')">&#128722; Produkte</button>
+  <button class="btab" id="tab_overview" onclick="setTab('overview')">&#128202; Uebersicht</button>
 </div>
-
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script>
@@ -72,19 +65,20 @@ var TASKS = [
   {id:"vid",label:"Videos schneiden",sub:"3 Videos Ziel",color:"#34d399",hasCount:true,goal:3},
   {id:"sleep",label:"Sleep 23 Uhr",sub:"Spaetestens 23:00",color:"#94a3b8"}
 ];
-var MOODS = [{e:"&#128522;",l:"Gut"},{e:"&#128528;",l:"Ok"},{e:"&#128532;",l:"Schlecht"}];
 var PIPELINE_STAGES = ["Gefunden","Analysiert","Getestet","Aktiv","Pausiert"];
 var STAGE_COLORS = {Gefunden:"#60a5fa",Analysiert:"#e879f9",Getestet:"#f59e0b",Aktiv:"#34d399",Pausiert:"#555"};
 
 var view = "day";
 var cDay = 0;
-var cTab = "week";
+var cOvTab = "week";
 var cProduct = null;
 var cPipeline = null;
+var cProdSection = "research";
 var W = "";
 var mI = null;
 
-var DATA = {chk:{},money:{},notes:{},checklist:{},absence:{},watchlist:[],products:[],pipeline:[],ideas:[],moods:{},reviews:{}};
+var DATA = {chk:{},money:{},notes:{},checklist:{},absence:{},watchlist:[],products:[],pipeline:[],ideas:[]};
+var REVIEWS = {};
 
 function getWeekKey(){
   var d=new Date(),dy=d.getDay();
@@ -92,27 +86,19 @@ function getWeekKey(){
   var m=new Date(d.getFullYear(),d.getMonth(),di);
   return m.getFullYear()+"_"+m.getMonth()+"_"+m.getDate();
 }
+function weekKeyToLabel(k){
+  var parts=k.split("_");
+  if(parts.length<3)return k;
+  var d=new Date(parseInt(parts[0]),parseInt(parts[1]),parseInt(parts[2]));
+  var end=new Date(d.getFullYear(),d.getMonth(),d.getDate()+6);
+  return d.getDate()+"."+(d.getMonth()+1)+". - "+end.getDate()+"."+(end.getMonth()+1)+"."+end.getFullYear();
+}
 function todayIdx(){var map={1:0,2:1,3:2,4:3,5:4,6:5,0:6};return map[new Date().getDay()];}
 function isSunday(){return new Date().getDay()===0;}
-function getSundayKey(){
-  var d=new Date();
-  var dy=d.getDay();
-  var diff=dy===0?0:7-dy;
-  var sun=new Date(d.getFullYear(),d.getMonth(),d.getDate()+diff);
-  return sun.getFullYear()+"_"+sun.getMonth()+"_"+sun.getDate();
-}
-function getLastSundayKey(){
-  var d=new Date();
-  var dy=d.getDay();
-  var diff=dy===0?7:dy;
-  var sun=new Date(d.getFullYear(),d.getMonth(),d.getDate()-diff);
-  return sun.getFullYear()+"_"+sun.getMonth()+"_"+sun.getDate();
-}
 
-// Firebase
 function loadData(){
   W=getWeekKey();
-  db.collection("ec2").doc("global").onSnapshot(function(snap){
+  db.collection("ec3").doc("global").onSnapshot(function(snap){
     if(snap.exists){
       var d=snap.data();
       DATA.watchlist=d.watchlist||[];
@@ -120,7 +106,7 @@ function loadData(){
       DATA.pipeline=d.pipeline||[];
       DATA.ideas=d.ideas||[];
     }
-    db.collection("ec2").doc(W).onSnapshot(function(snap2){
+    db.collection("ec3").doc(W).onSnapshot(function(snap2){
       if(snap2.exists){
         var d2=snap2.data();
         DATA.chk=d2.chk||{};
@@ -128,10 +114,9 @@ function loadData(){
         DATA.notes=d2.notes||{};
         DATA.checklist=d2.checklist||{};
         DATA.absence=d2.absence||{};
-        DATA.moods=d2.moods||{};
       }
-      db.collection("ec2_reviews").doc("all").onSnapshot(function(snap3){
-        if(snap3.exists) DATA.reviews=snap3.data()||{};
+      db.collection("ec3_reviews").doc("all").onSnapshot(function(snap3){
+        if(snap3.exists)REVIEWS=snap3.data()||{};
         render();
         document.getElementById("bnav").style.display="flex";
       });
@@ -139,39 +124,34 @@ function loadData(){
   });
 }
 
-var saveGTimer=null,saveWTimer=null;
+var saveGT=null,saveWT=null;
 function saveGlobal(){
-  clearTimeout(saveGTimer);
-  saveGTimer=setTimeout(function(){
-    db.collection("ec2").doc("global").set({
-      watchlist:DATA.watchlist,
-      products:DATA.products,
-      pipeline:DATA.pipeline,
-      ideas:DATA.ideas
+  clearTimeout(saveGT);
+  saveGT=setTimeout(function(){
+    db.collection("ec3").doc("global").set({
+      watchlist:DATA.watchlist,products:DATA.products,
+      pipeline:DATA.pipeline,ideas:DATA.ideas
     },{merge:true}).catch(function(){});
   },600);
 }
 function saveWeek(){
-  clearTimeout(saveWTimer);
-  saveWTimer=setTimeout(function(){
-    db.collection("ec2").doc(W).set({
+  clearTimeout(saveWT);
+  saveWT=setTimeout(function(){
+    db.collection("ec3").doc(W).set({
       chk:DATA.chk,money:DATA.money,notes:DATA.notes,
-      checklist:DATA.checklist,absence:DATA.absence,moods:DATA.moods
+      checklist:DATA.checklist,absence:DATA.absence
     },{merge:true}).catch(function(){});
   },600);
 }
 function saveReviews(){
-  db.collection("ec2_reviews").doc("all").set(DATA.reviews,{merge:true}).catch(function(){});
+  db.collection("ec3_reviews").doc("all").set(REVIEWS,{merge:true}).catch(function(){});
 }
 
-// Tab navigation
 function setTab(t){
-  view=t;
+  view=t;cProduct=null;cPipeline=null;
   document.querySelectorAll(".btab").forEach(function(b){b.classList.remove("active");});
-  var el=document.getElementById("tab_"+t);
-  if(el)el.classList.add("active");
-  render();
-  window.scrollTo(0,0);
+  var el=document.getElementById("tab_"+t);if(el)el.classList.add("active");
+  render();window.scrollTo(0,0);
 }
 window.setTab=setTab;
 
@@ -226,32 +206,9 @@ function moneyHTML(day){
   return h;
 }
 
-// Mood
-function setMood(day,user,mood){
-  if(!DATA.moods[day])DATA.moods[day]={};
-  DATA.moods[day][user]=mood;
-  saveWeek();
-  var el=document.getElementById("mood_"+day+"_"+user);
-  if(el)el.innerHTML=moodHTML(day,user);
-}
-function moodHTML(day,user){
-  var cur=DATA.moods[day]&&DATA.moods[day][user]||null;
-  var uc=UCOL[user];
-  var h="<div style='display:flex;gap:6px;margin-top:6px'>";
-  for(var i=0;i<MOODS.length;i++){
-    var m=MOODS[i],sel=cur===m.l;
-    h+="<button onclick='setMood("+day+",\""+user+"\",\""+m.l+"\")' class='mood-btn"+(sel?" selected":"")+"' style='"+(sel?"border-color:"+uc+";background:"+uc+"22":"")+"'>"+m.e+"</button>";
-  }
-  h+="</div>";
-  if(cur)h+="<div style='font-size:11px;color:"+uc+";margin-top:4px'>"+user+": "+cur+"</div>";
-  return h;
-}
-
-// Notes
+// Notes / Absence / Checklist
 function saveSharedNote(day,val){DATA.notes["shared_"+day]=val;saveWeek();}
 function saveAbsence(day,user,val){DATA.absence[day+"_"+user]=val;saveWeek();}
-
-// Checklist
 function getCL(day){return DATA.checklist["d"+day]||[];}
 function clHTML(day){
   var list=getCL(day);
@@ -266,8 +223,7 @@ function clHTML(day){
   return h;
 }
 function addCLItem(day){
-  var input=document.getElementById("cl_input_"+day);
-  if(!input)return;
+  var input=document.getElementById("cl_input_"+day);if(!input)return;
   var val=input.value.trim();if(!val)return;
   if(val[0]!=="-")val="- "+val;
   var list=getCL(day);list.push({text:val,done:false});
@@ -297,18 +253,11 @@ function wlHTML(){
 function addWL(){
   var input=document.getElementById("wl_input");if(!input)return;
   var val=input.value.trim();if(!val)return;
-  if(!DATA.watchlist)DATA.watchlist=[];
   DATA.watchlist.push({text:val,done:false});saveGlobal();input.value="";
   var el=document.getElementById("wl_list");if(el)el.innerHTML=wlHTML();
 }
-function toggleWL(idx){
-  if(!DATA.watchlist)return;DATA.watchlist[idx].done=!DATA.watchlist[idx].done;saveGlobal();
-  var el=document.getElementById("wl_list");if(el)el.innerHTML=wlHTML();
-}
-function removeWL(idx){
-  if(!DATA.watchlist)return;DATA.watchlist.splice(idx,1);saveGlobal();
-  var el=document.getElementById("wl_list");if(el)el.innerHTML=wlHTML();
-}
+function toggleWL(idx){DATA.watchlist[idx].done=!DATA.watchlist[idx].done;saveGlobal();var el=document.getElementById("wl_list");if(el)el.innerHTML=wlHTML();}
+function removeWL(idx){DATA.watchlist.splice(idx,1);saveGlobal();var el=document.getElementById("wl_list");if(el)el.innerHTML=wlHTML();}
 
 // Ideas
 function ideasHTML(){
@@ -316,10 +265,9 @@ function ideasHTML(){
   if(!list.length)return "<div style='font-size:12px;color:#333;padding:4px 0'>Noch keine Ideen...</div>";
   var h="";
   for(var i=0;i<list.length;i++){
-    var item=list[i];
     h+="<div style='display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #1a1a1a'>";
     h+="<div style='font-size:11px;color:#f59e0b;flex-shrink:0'>*</div>";
-    h+="<div style='font-size:13px;color:#e8e8e8;flex:1'>"+item+"</div>";
+    h+="<div style='font-size:13px;color:#e8e8e8;flex:1'>"+DATA.ideas[i]+"</div>";
     h+="<button onclick='removeIdea("+i+")' style='background:none;color:#333;font-size:16px;padding:2px 6px'>x</button></div>";
   }
   return h;
@@ -327,129 +275,71 @@ function ideasHTML(){
 function addIdea(){
   var input=document.getElementById("idea_input");if(!input)return;
   var val=input.value.trim();if(!val)return;
-  if(!DATA.ideas)DATA.ideas=[];
   DATA.ideas.push(val);saveGlobal();input.value="";
   var el=document.getElementById("idea_list");if(el)el.innerHTML=ideasHTML();
 }
-function removeIdea(idx){
-  DATA.ideas.splice(idx,1);saveGlobal();
-  var el=document.getElementById("idea_list");if(el)el.innerHTML=ideasHTML();
-}
+function removeIdea(idx){DATA.ideas.splice(idx,1);saveGlobal();var el=document.getElementById("idea_list");if(el)el.innerHTML=ideasHTML();}
 
-// Products (Datenbank mit Bewertung)
+// Products (Research)
 function starsHTML(pid,user,val){
   var h="<div style='display:flex;gap:2px'>";
   for(var i=1;i<=5;i++){
-    h+="<span onclick='setProductStar(\""+pid+"\",\""+user+"\","+i+")' style='font-size:18px;cursor:pointer;color:"+(i<=val?"#f59e0b":"#333")+"'>&#9733;</span>";
+    h+="<span onclick='setProductStar(\""+pid+"\",\""+user+"\","+i+")' style='font-size:20px;cursor:pointer;color:"+(i<=val?"#f59e0b":"#2a2a2a")+"'>&#9733;</span>";
   }
   h+="</div>";
   return h;
 }
 function setProductStar(pid,user,val){
-  var p=getProductById(pid);if(!p)return;
-  if(!p.stars)p.stars={};
-  p.stars[user]=val;
-  saveGlobal();
-  var el=document.getElementById("stars_"+pid+"_"+user);
-  if(el)el.innerHTML=starsHTML(pid,user,val);
+  var p=getProdById(pid);if(!p)return;
+  if(!p.stars)p.stars={};p.stars[user]=val;saveGlobal();
+  var el=document.getElementById("stars_"+pid+"_"+user);if(el)el.innerHTML=starsHTML(pid,user,val);
 }
-function getProductById(pid){
-  for(var i=0;i<DATA.products.length;i++){if(DATA.products[i].id===pid)return DATA.products[i];}
-  return null;
-}
+function getProdById(pid){for(var i=0;i<DATA.products.length;i++){if(DATA.products[i].id===pid)return DATA.products[i];}return null;}
 function addProduct(){
   var name=document.getElementById("prod_name");if(!name||!name.value.trim())return;
-  var p={
-    id:"p"+Date.now(),name:name.value.trim(),
-    ek:"",vk:"",stars:{MO:0,Nawid:0},
-    concSocials:"",concWeb:"",notes:"",createdAt:Date.now()
-  };
-  DATA.products.push(p);saveGlobal();
-  name.value="";
-  setTab("products");
+  DATA.products.push({id:"p"+Date.now(),name:name.value.trim(),ek:"",vk:"",stars:{MO:0,Nawid:0},concSocials:"",concWeb:"",notes:""});
+  saveGlobal();name.value="";render();
 }
-function saveProductField(pid,field,val){
-  var p=getProductById(pid);if(!p)return;
-  p[field]=val;saveGlobal();
-}
-function deleteProduct(pid){
-  DATA.products=DATA.products.filter(function(p){return p.id!==pid;});
-  saveGlobal();cProduct=null;setTab("products");
-}
-function avgStars(p){
-  var s=(p.stars&&p.stars.MO||0)+(p.stars&&p.stars.Nawid||0);
-  return (s/2).toFixed(1);
-}
-function profit(p){
-  var ek=parseFloat(p.ek)||0,vk=parseFloat(p.vk)||0;
-  return vk>0&&ek>0?(vk-ek).toFixed(2):null;
-}
+function saveProductField(pid,field,val){var p=getProdById(pid);if(p){p[field]=val;saveGlobal();}}
+function deleteProduct(pid){DATA.products=DATA.products.filter(function(p){return p.id!==pid;});saveGlobal();cProduct=null;render();}
+function profit(p){var ek=parseFloat(p.ek)||0,vk=parseFloat(p.vk)||0;return vk>0&&ek>0?(vk-ek).toFixed(2):null;}
+function avgStars(p){return (((p.stars&&p.stars.MO||0)+(p.stars&&p.stars.Nawid||0))/2).toFixed(1);}
 
 // Pipeline
-function addPipelineProduct(){
+function getPipeById(pid){for(var i=0;i<DATA.pipeline.length;i++){if(DATA.pipeline[i].id===pid)return DATA.pipeline[i];}return null;}
+function addPipeline(){
   var name=document.getElementById("pp_name");if(!name||!name.value.trim())return;
-  var p={
-    id:"pp"+Date.now(),name:name.value.trim(),
-    stage:"Gefunden",
-    socials:"",shops:"",niche:"",keywords:"",
-    likes:"",concepts:"",notes:"",createdAt:Date.now()
-  };
-  DATA.pipeline.push(p);saveGlobal();
-  name.value="";render();
+  DATA.pipeline.push({id:"pp"+Date.now(),name:name.value.trim(),stage:"Gefunden",socials:"",shops:"",niche:"",keywords:"",likes:"",concepts:""});
+  saveGlobal();name.value="";render();
 }
-function getPipelineById(pid){
-  for(var i=0;i<DATA.pipeline.length;i++){if(DATA.pipeline[i].id===pid)return DATA.pipeline[i];}
-  return null;
-}
-function savePipelineField(pid,field,val){
-  var p=getPipelineById(pid);if(!p)return;
-  p[field]=val;saveGlobal();
-}
-function setPipelineStage(pid,stage){
-  var p=getPipelineById(pid);if(!p)return;
-  p.stage=stage;saveGlobal();
-  var el=document.getElementById("stage_"+pid);
-  if(el)el.innerHTML=stageHTML(pid);
-}
+function savePipeField(pid,field,val){var p=getPipeById(pid);if(p){p[field]=val;saveGlobal();}}
+function setPipeStage(pid,stage){var p=getPipeById(pid);if(p){p.stage=stage;saveGlobal();}var el=document.getElementById("stage_"+pid);if(el)el.innerHTML=stageHTML(pid);}
 function stageHTML(pid){
-  var p=getPipelineById(pid);if(!p)return"";
+  var p=getPipeById(pid);if(!p)return"";
   var h="<div style='display:flex;gap:4px;flex-wrap:wrap;margin-top:8px'>";
   for(var i=0;i<PIPELINE_STAGES.length;i++){
-    var s=PIPELINE_STAGES[i],sel=p.stage===s;
-    var sc=STAGE_COLORS[s];
-    h+="<button onclick='setPipelineStage(\""+pid+"\",\""+s+"\")' style='font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid "+(sel?sc:"#333")+";background:"+(sel?sc+"22":"transparent")+";color:"+(sel?sc:"#555")+"'>"+s+"</button>";
+    var s=PIPELINE_STAGES[i],sc=STAGE_COLORS[s],sel=p.stage===s;
+    h+="<button onclick='setPipeStage(\""+pid+"\",\""+s+"\")' style='font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid "+(sel?sc:"#333")+";background:"+(sel?sc+"22":"transparent")+";color:"+(sel?sc:"#555")+"'>"+s+"</button>";
   }
-  h+="</div>";
-  return h;
+  return h+"</div>";
 }
-function deletePipeline(pid){
-  DATA.pipeline=DATA.pipeline.filter(function(p){return p.id!==pid;});
-  saveGlobal();cPipeline=null;render();
-}
+function deletePipeline(pid){DATA.pipeline=DATA.pipeline.filter(function(p){return p.id!==pid;});saveGlobal();cPipeline=null;render();}
 
 // Streak
 function calcStreak(){
   var streak=0,today=todayIdx();
   for(var d=today;d>=0;d--){
     var allDone=true;
-    for(var ui=0;ui<USERS.length;ui++){
-      for(var ti=0;ti<TASKS.length;ti++){
+    for(var ui=0;ui<USERS.length&&allDone;ui++){
+      for(var ti=0;ti<TASKS.length&&allDone;ti++){
         var t=TASKS[ti];
-        if(t.hasCount){if((DATA.chk[d+"_"+USERS[ui]+"_"+t.id+"_v"]||0)<t.goal){allDone=false;break;}}
-        else{if(!DATA.chk[d+"_"+USERS[ui]+"_"+t.id]){allDone=false;break;}}
+        if(t.hasCount){if((DATA.chk[d+"_"+USERS[ui]+"_"+t.id+"_v"]||0)<t.goal)allDone=false;}
+        else{if(!DATA.chk[d+"_"+USERS[ui]+"_"+t.id])allDone=false;}
       }
-      if(!allDone)break;
     }
     if(allDone)streak++;else break;
   }
   return streak;
-}
-
-// Weekly review
-function saveReview(key,field,val){
-  if(!DATA.reviews[key])DATA.reviews[key]={};
-  DATA.reviews[key][field]=val;
-  saveReviews();
 }
 
 // Stats
@@ -464,6 +354,13 @@ function userDayDone(day,user){
 }
 function weekTotal(){var t=0;for(var i=0;i<7;i++)t+=DATA.money["d"+i]||0;return t;}
 
+// Reviews
+function saveReview(wk,field,val){
+  if(!REVIEWS[wk])REVIEWS[wk]={};
+  REVIEWS[wk][field]=val;
+  saveReviews();
+}
+
 // Reset
 function resetDay(day){
   var prefix=day+"_",newChk={};
@@ -472,12 +369,11 @@ function resetDay(day){
   delete DATA.money["d"+day];
   delete DATA.notes["shared_"+day];
   delete DATA.checklist["d"+day];
-  delete DATA.moods[day];
   for(var ui=0;ui<USERS.length;ui++)delete DATA.absence[day+"_"+USERS[ui]];
   saveWeek();render();
 }
 function resetWeek(){
-  DATA.chk={};DATA.money={};DATA.notes={};DATA.checklist={};DATA.absence={};DATA.moods={};
+  DATA.chk={};DATA.money={};DATA.notes={};DATA.checklist={};DATA.absence={};
   saveWeek();render();
 }
 
@@ -485,21 +381,18 @@ function resetWeek(){
 function render(){
   var app=document.getElementById("app");if(!app)return;
   if(view==="products"&&cProduct){app.innerHTML=renderProductDetail();return;}
+  if(view==="products"&&cPipeline){app.innerHTML=renderPipelineDetail();return;}
   if(view==="products"){app.innerHTML=renderProducts();return;}
-  if(view==="pipeline"&&cPipeline){app.innerHTML=renderPipelineDetail();return;}
-  if(view==="pipeline"){app.innerHTML=renderPipeline();return;}
   if(view==="overview"){app.innerHTML=renderOverview();return;}
   app.innerHTML=renderDay();
 }
 
-// ---- DAY ----
+// DAY
 function renderDay(){
-  var isTd=cDay===todayIdx();
-  var streak=calcStreak();
-  var h="<div class='nav'>";
-  h+="<div style='flex:1;text-align:center'>";
-  h+="<div style='font-size:16px;font-weight:700'>"+DNAMES[cDay]+(isTd?" <span style='font-size:10px;color:#60a5fa'>Heute</span>":"")+"</div>";
-  if(streak>0)h+="<div style='font-size:10px;margin-top:2px'>&#128293; "+streak+" Tage Streak</div>";
+  var isTd=cDay===todayIdx(),streak=calcStreak();
+  var h="<div class='nav'><div style='flex:1;text-align:center'>";
+  h+="<div style='font-size:17px;font-weight:700'>"+DNAMES[cDay]+(isTd?" <span style='font-size:10px;color:#60a5fa'>Heute</span>":"")+"</div>";
+  if(streak>0)h+="<div style='font-size:11px;color:#f59e0b;margin-top:2px'>&#128293; "+streak+" Tage Streak</div>";
   h+="</div></div>";
   h+="<div style='display:flex;gap:4px;padding:10px 16px 0'>";
   for(var i=0;i<7;i++){
@@ -507,16 +400,6 @@ function renderDay(){
     h+="<button onclick='goDay("+i+")' class='dbtn"+(isCur?" active":(isTd2?" today":""))+"'>"+DAYS[i]+"</button>";
   }
   h+="</div><div class='page'>";
-
-  // Mood
-  h+="<div class='card'><div class='st'>Stimmung heute</div><div class='grid2'>";
-  for(var ui=0;ui<USERS.length;ui++){
-    var user=USERS[ui],uc=UCOL[user];
-    h+="<div style='background:#0a0a0a;border-radius:12px;padding:10px;border-left:3px solid "+uc+"'>";
-    h+="<div style='font-size:11px;font-weight:700;color:"+uc+";margin-bottom:4px'>"+user+"</div>";
-    h+="<div id='mood_"+cDay+"_"+user+"'>"+moodHTML(cDay,user)+"</div></div>";
-  }
-  h+="</div></div>";
 
   // Tasks
   h+="<div class='st'>Aufgaben</div>";
@@ -556,7 +439,7 @@ function renderDay(){
   h+="<button onclick='addCLItem("+cDay+")' style='background:#1a1a1a;border:1px solid #222;border-radius:8px;padding:8px 14px;color:#888;font-size:14px'>+</button>";
   h+="</div></div>";
 
-  // Shared note
+  // Notes
   h+="<div class='card'><div class='st'>Notizen (geteilt)</div>";
   h+="<textarea class='narea' placeholder='Gemeinsame Notizen...' onchange='saveSharedNote("+cDay+",this.value)' onblur='saveSharedNote("+cDay+",this.value)'>"+(DATA.notes["shared_"+cDay]||"")+"</textarea></div>";
 
@@ -570,13 +453,12 @@ function renderDay(){
   }
   h+="</div>";
 
-  // Watchlist
+  // Watchlist mini
   h+="<div class='card' style='border-top:3px solid #a78bfa'>";
   h+="<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px'>";
   h+="<div class='st' style='margin-bottom:0'>Produkte im Auge behalten</div>";
-  h+="<button onclick='setTab(\"products\")' style='font-size:11px;padding:4px 10px;border-radius:20px;background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa44'>Alle Produkte</button>";
-  h+="</div>";
-  h+="<div id='wl_list'>"+wlHTML()+"</div>";
+  h+="<button onclick='setTab(\"products\")' style='font-size:11px;padding:4px 10px;border-radius:20px;background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa44'>Alle</button>";
+  h+="</div><div id='wl_list'>"+wlHTML()+"</div>";
   h+="<div style='display:flex;gap:8px;margin-top:10px'>";
   h+="<input id='wl_input' class='clinput' placeholder='Produktname oder Link...' onkeydown='if(event.keyCode===13)addWL()'/>";
   h+="<button onclick='addWL()' style='background:#a78bfa22;border:1px solid #a78bfa44;border-radius:8px;padding:8px 14px;color:#a78bfa;font-size:14px'>+</button>";
@@ -590,46 +472,71 @@ function renderDay(){
   h+="<button onclick='addIdea()' style='background:#f59e0b22;border:1px solid #f59e0b44;border-radius:8px;padding:8px 14px;color:#f59e0b;font-size:14px'>+</button>";
   h+="</div></div>";
 
-  // Reset
   h+="<button onclick='resetDay("+cDay+")' style='background:none;border:1px solid #1a1a1a;color:#333;font-size:11px;padding:8px;border-radius:12px;width:100%'>Tag zuruecksetzen</button>";
   h+="</div>";
   return h;
 }
 
-// ---- PRODUCTS ----
+// PRODUCTS TAB
 function renderProducts(){
-  var h="<div class='nav'>";
-  h+="<div style='font-size:16px;font-weight:700;flex:1;text-align:center'>Produkt-Datenbank</div></div>";
-  h+="<div class='page'>";
+  var h="<div class='nav'><div style='flex:1;text-align:center;font-size:16px;font-weight:700'>Produkte</div></div>";
+  h+="<div style='display:flex;gap:8px;padding:12px 16px 0'>";
+  h+="<button class='dbtn"+(cProdSection==="research"?" active":"")+"' onclick='cProdSection=\"research\";render()'>Research</button>";
+  h+="<button class='dbtn"+(cProdSection==="pipeline"?" active":"")+"' onclick='cProdSection=\"pipeline\";render()'>Pipeline</button>";
+  h+="</div><div class='page'>";
 
-  // Add product
-  h+="<div class='card' style='border-top:3px solid #a78bfa'>";
-  h+="<div class='st'>Neues Produkt</div>";
-  h+="<div style='display:flex;gap:8px'>";
-  h+="<input id='prod_name' class='clinput' placeholder='Produktname...' onkeydown='if(event.keyCode===13)addProduct()'/>";
-  h+="<button onclick='addProduct()' style='background:#a78bfa22;border:1px solid #a78bfa44;border-radius:8px;padding:8px 14px;color:#a78bfa;font-size:14px'>+</button>";
-  h+="</div></div>";
+  if(cProdSection==="research"){
+    // Add product
+    h+="<div class='card' style='border-top:3px solid #a78bfa'>";
+    h+="<div class='st'>Neues Produkt hinzufuegen</div>";
+    h+="<div style='display:flex;gap:8px'>";
+    h+="<input id='prod_name' class='clinput' placeholder='Produktname...' onkeydown='if(event.keyCode===13)addProduct()'/>";
+    h+="<button onclick='addProduct()' style='background:#a78bfa22;border:1px solid #a78bfa44;border-radius:8px;padding:8px 14px;color:#a78bfa;font-size:14px'>+</button>";
+    h+="</div></div>";
 
-  // Product list
-  if(!DATA.products||!DATA.products.length){
-    h+="<div style='text-align:center;color:#333;padding:40px 0;font-size:14px'>Noch keine Produkte</div>";
-  } else {
-    for(var i=0;i<DATA.products.length;i++){
-      var p=DATA.products[i];
-      var avg=avgStars(p);
-      var pr=profit(p);
-      h+="<div onclick='openProduct(\""+p.id+"\")' style='background:#111;border:1px solid #222;border-radius:14px;padding:14px 16px;cursor:pointer'>";
-      h+="<div style='display:flex;justify-content:space-between;align-items:center'>";
-      h+="<div style='font-size:15px;font-weight:700'>"+p.name+"</div>";
-      h+="<div style='font-size:18px;color:#f59e0b'>"+avg+"&#9733;</div>";
-      h+="</div>";
-      h+="<div style='display:flex;gap:8px;margin-top:8px;flex-wrap:wrap'>";
-      if(p.ek)h+="<span class='pill' style='background:#60a5fa18;color:#60a5fa'>EK: "+p.ek+"</span>";
-      if(p.vk)h+="<span class='pill' style='background:#34d399 18;color:#34d399'>VK: "+p.vk+"</span>";
-      if(pr)h+="<span class='pill' style='background:#34d39922;color:#34d399'>Gewinn: "+pr+"</span>";
-      h+="</div>";
-      h+="<div class='bbg' style='margin-top:10px'><div class='bb' style='background:#a78bfa;width:"+(avg/5*100)+"%'></div></div>";
-      h+="</div>";
+    if(!DATA.products||!DATA.products.length){
+      h+="<div style='text-align:center;color:#333;padding:30px 0;font-size:14px'>Noch keine Produkte</div>";
+    }else{
+      for(var i=0;i<DATA.products.length;i++){
+        var p=DATA.products[i],avg=avgStars(p),pr=profit(p);
+        h+="<div onclick='openProduct(\""+p.id+"\")' style='background:#111;border:1px solid #222;border-radius:14px;padding:14px 16px;cursor:pointer'>";
+        h+="<div style='display:flex;justify-content:space-between;align-items:center'>";
+        h+="<div style='font-size:15px;font-weight:700'>"+p.name+"</div>";
+        h+="<div style='font-size:16px;color:#f59e0b'>"+avg+" &#9733;</div></div>";
+        h+="<div style='display:flex;gap:8px;margin-top:8px;flex-wrap:wrap'>";
+        if(p.ek)h+="<span class='pill' style='background:#60a5fa18;color:#60a5fa'>EK: "+p.ek+"</span>";
+        if(p.vk)h+="<span class='pill' style='background:#34d39918;color:#34d399'>VK: "+p.vk+"</span>";
+        if(pr)h+="<span class='pill' style='background:#34d39922;color:#34d399'>Gewinn: &#8364;"+pr+"</span>";
+        h+="</div>";
+        h+="<div class='bbg' style='margin-top:10px'><div class='bb' style='background:#a78bfa;width:"+(avg/5*100)+"%'></div></div></div>";
+      }
+    }
+  }
+
+  if(cProdSection==="pipeline"){
+    h+="<div class='card' style='border-top:3px solid #34d399'>";
+    h+="<div class='st'>Produkt hinzufuegen</div>";
+    h+="<div style='display:flex;gap:8px'>";
+    h+="<input id='pp_name' class='clinput' placeholder='Produktname...' onkeydown='if(event.keyCode===13)addPipeline()'/>";
+    h+="<button onclick='addPipeline()' style='background:#34d39922;border:1px solid #34d39944;border-radius:8px;padding:8px 14px;color:#34d399;font-size:14px'>+</button>";
+    h+="</div></div>";
+
+    if(!DATA.pipeline||!DATA.pipeline.length){
+      h+="<div style='text-align:center;color:#333;padding:30px 0;font-size:14px'>Noch keine aktiven Produkte</div>";
+    }else{
+      for(var si=0;si<PIPELINE_STAGES.length;si++){
+        var stage=PIPELINE_STAGES[si],sc=STAGE_COLORS[stage];
+        var stageProd=DATA.pipeline.filter(function(p){return p.stage===stage;});
+        if(!stageProd.length)continue;
+        h+="<div style='font-size:10px;color:"+sc+";letter-spacing:2px;text-transform:uppercase;padding:4px 0'>"+stage+" ("+stageProd.length+")</div>";
+        for(var pi=0;pi<stageProd.length;pi++){
+          var p=stageProd[pi];
+          h+="<div onclick='openPipeline(\""+p.id+"\")' style='background:#111;border:1px solid "+sc+"33;border-left:3px solid "+sc+";border-radius:14px;padding:12px 14px;cursor:pointer'>";
+          h+="<div style='font-size:15px;font-weight:700'>"+p.name+"</div>";
+          if(p.niche)h+="<div style='font-size:11px;color:#555;margin-top:4px'>"+p.niche+"</div>";
+          h+="</div>";
+        }
+      }
     }
   }
   h+="</div>";
@@ -637,16 +544,15 @@ function renderProducts(){
 }
 
 function renderProductDetail(){
-  var p=getProductById(cProduct);if(!p)return renderProducts();
+  var p=getProdById(cProduct);if(!p)return renderProducts();
   var pr=profit(p);
   var h="<div class='nav'>";
-  h+="<button class='nbtn' onclick='cProduct=null;setTab(\"products\")'>&#8592; Zurueck</button>";
+  h+="<button class='nbtn' onclick='cProduct=null;render()'>&#8592; Zurueck</button>";
   h+="<div style='flex:1;text-align:center;font-size:15px;font-weight:700'>"+p.name+"</div></div>";
   h+="<div class='page'>";
 
-  // Stars per user
-  h+="<div class='card' style='border-top:3px solid #f59e0b'><div class='st'>Bewertung (1-5 Sterne)</div>";
-  h+="<div class='grid2'>";
+  // Stars
+  h+="<div class='card' style='border-top:3px solid #f59e0b'><div class='st'>Bewertung</div><div class='grid2'>";
   for(var ui=0;ui<USERS.length;ui++){
     var user=USERS[ui],uc=UCOL[user];
     h+="<div style='background:#0a0a0a;border-radius:12px;padding:10px;border-left:3px solid "+uc+"'>";
@@ -655,17 +561,17 @@ function renderProductDetail(){
   }
   h+="</div></div>";
 
-  // EK / VK / Gewinn
+  // Kalkulation
   h+="<div class='card'><div class='st'>Kalkulation</div>";
   h+="<div style='display:flex;flex-direction:column;gap:10px'>";
   h+="<div><div style='font-size:11px;color:#555;margin-bottom:4px'>Einkaufspreis (EK)</div>";
-  h+="<input class='finput' type='text' value='"+( p.ek||"")+"' placeholder='z.B. 12.50' onchange='saveProductField(\""+p.id+"\",\"ek\",this.value)' onblur='saveProductField(\""+p.id+"\",\"ek\",this.value)'/></div>";
+  h+="<input class='finput' type='text' value='"+(p.ek||"")+"' placeholder='z.B. 12.50' onchange='saveProductField(\""+p.id+"\",\"ek\",this.value)' onblur='saveProductField(\""+p.id+"\",\"ek\",this.value)'/></div>";
   h+="<div><div style='font-size:11px;color:#555;margin-bottom:4px'>Verkaufspreis (VK)</div>";
   h+="<input class='finput' type='text' value='"+(p.vk||"")+"' placeholder='z.B. 39.99' onchange='saveProductField(\""+p.id+"\",\"vk\",this.value)' onblur='saveProductField(\""+p.id+"\",\"vk\",this.value)'/></div>";
   if(pr){
-    h+="<div style='background:#34d39918;border:1px solid #34d39933;border-radius:10px;padding:10px;text-align:center'>";
+    h+="<div style='background:#34d39918;border:1px solid #34d39933;border-radius:10px;padding:12px;text-align:center'>";
     h+="<div style='font-size:11px;color:#555'>Gewinn pro Stueck (Durchschnitt)</div>";
-    h+="<div style='font-size:28px;font-weight:800;color:#34d399;margin-top:4px'>&#8364;"+pr+"</div></div>";
+    h+="<div style='font-size:32px;font-weight:800;color:#34d399;margin-top:4px'>&#8364;"+pr+"</div></div>";
   }
   h+="</div></div>";
 
@@ -673,109 +579,64 @@ function renderProductDetail(){
   h+="<div class='card'><div class='st'>Konkurrenz</div>";
   h+="<div style='display:flex;flex-direction:column;gap:10px'>";
   h+="<div><div style='font-size:11px;color:#555;margin-bottom:4px'>Konkurrenz Socials</div>";
-  h+="<input class='finput' type='text' value='"+(p.concSocials||"")+"' placeholder='@account, @account...' onchange='saveProductField(\""+p.id+"\",\"concSocials\",this.value)' onblur='saveProductField(\""+p.id+"\",\"concSocials\",this.value)'/></div>";
+  h+="<input class='finput' value='"+(p.concSocials||"")+"' placeholder='@account1, @account2...' onchange='saveProductField(\""+p.id+"\",\"concSocials\",this.value)' onblur='saveProductField(\""+p.id+"\",\"concSocials\",this.value)'/></div>";
   h+="<div><div style='font-size:11px;color:#555;margin-bottom:4px'>Konkurrenz Website</div>";
-  h+="<input class='finput' type='text' value='"+(p.concWeb||"")+"' placeholder='shop.com, shop2.com...' onchange='saveProductField(\""+p.id+"\",\"concWeb\",this.value)' onblur='saveProductField(\""+p.id+"\",\"concWeb\",this.value)'/></div>";
+  h+="<input class='finput' value='"+(p.concWeb||"")+"' placeholder='shop1.com, shop2.com...' onchange='saveProductField(\""+p.id+"\",\"concWeb\",this.value)' onblur='saveProductField(\""+p.id+"\",\"concWeb\",this.value)'/></div>";
   h+="</div></div>";
 
   // Notes
   h+="<div class='card'><div class='st'>Notizen</div>";
   h+="<textarea class='narea' placeholder='Sonstige Notizen...' onchange='saveProductField(\""+p.id+"\",\"notes\",this.value)' onblur='saveProductField(\""+p.id+"\",\"notes\",this.value)'>"+(p.notes||"")+"</textarea></div>";
 
-  // Delete
   h+="<button onclick='deleteProduct(\""+p.id+"\")' style='background:none;border:1px solid #f43f5e33;color:#f43f5e55;font-size:11px;padding:8px;border-radius:12px;width:100%'>Produkt loeschen</button>";
   h+="</div>";
   return h;
 }
 
-// ---- PIPELINE ----
-function renderPipeline(){
-  var h="<div class='nav'>";
-  h+="<div style='font-size:16px;font-weight:700;flex:1;text-align:center'>Aktive Produkte</div></div>";
-  h+="<div class='page'>";
-
-  // Add
-  h+="<div class='card' style='border-top:3px solid #34d399'>";
-  h+="<div class='st'>Produkt hinzufuegen</div>";
-  h+="<div style='display:flex;gap:8px'>";
-  h+="<input id='pp_name' class='clinput' placeholder='Produktname...' onkeydown='if(event.keyCode===13)addPipelineProduct()'/>";
-  h+="<button onclick='addPipelineProduct()' style='background:#34d39922;border:1px solid #34d39944;border-radius:8px;padding:8px 14px;color:#34d399;font-size:14px'>+</button>";
-  h+="</div></div>";
-
-  // Stage overview
-  for(var si=0;si<PIPELINE_STAGES.length;si++){
-    var stage=PIPELINE_STAGES[si],sc=STAGE_COLORS[stage];
-    var stageProd=DATA.pipeline.filter(function(p){return p.stage===stage;});
-    if(!stageProd.length)continue;
-    h+="<div style='font-size:11px;color:"+sc+";letter-spacing:2px;text-transform:uppercase;padding:0 4px;margin-top:4px'>"+stage+" ("+stageProd.length+")</div>";
-    for(var pi=0;pi<stageProd.length;pi++){
-      var p=stageProd[pi];
-      h+="<div onclick='openPipeline(\""+p.id+"\")' style='background:#111;border:1px solid "+sc+"33;border-left:3px solid "+sc+";border-radius:14px;padding:12px 14px;cursor:pointer'>";
-      h+="<div style='font-size:15px;font-weight:700'>"+p.name+"</div>";
-      if(p.niche)h+="<div style='font-size:11px;color:#555;margin-top:4px'>Nische: "+p.niche+"</div>";
-      h+="</div>";
-    }
-  }
-
-  if(!DATA.pipeline||!DATA.pipeline.length){
-    h+="<div style='text-align:center;color:#333;padding:40px 0;font-size:14px'>Noch keine aktiven Produkte</div>";
-  }
-  h+="</div>";
-  return h;
-}
-
 function renderPipelineDetail(){
-  var p=getPipelineById(cPipeline);if(!p)return renderPipeline();
+  var p=getPipeById(cPipeline);if(!p)return renderProducts();
   var sc=STAGE_COLORS[p.stage]||"#555";
   var h="<div class='nav'>";
-  h+="<button class='nbtn' onclick='cPipeline=null;setTab(\"pipeline\")'>&#8592; Zurueck</button>";
+  h+="<button class='nbtn' onclick='cPipeline=null;render()'>&#8592; Zurueck</button>";
   h+="<div style='flex:1;text-align:center;font-size:15px;font-weight:700'>"+p.name+"</div></div>";
   h+="<div class='page'>";
+  h+="<div class='card'><div class='st'>Status</div><div id='stage_"+p.id+"'>"+stageHTML(p.id)+"</div></div>";
 
-  // Stage selector
-  h+="<div class='card'><div class='st'>Status</div>";
-  h+="<div id='stage_"+p.id+"'>"+stageHTML(p.id)+"</div></div>";
-
-  // Fields
   var fields=[
     {key:"socials",label:"Konkurrenten Socials",ph:"@account1, @account2..."},
     {key:"shops",label:"Konkurrenten Shops",ph:"shop1.com, shop2.com..."},
-    {key:"niche",label:"Nische",ph:"z.B. Pet Accessories, Kitchen Gadgets..."},
+    {key:"niche",label:"Nische",ph:"z.B. Pet Accessories..."},
     {key:"keywords",label:"Niche Research / Keywords",ph:"keyword1, keyword2..."},
     {key:"likes",label:"Was moegen die Kunden",ph:"Was liebt die Zielgruppe..."},
-    {key:"concepts",label:"Konzepte",ph:"Video-Ideen, Winkel, Hooks..."}
+    {key:"concepts",label:"Konzepte",ph:"Video-Ideen, Hooks..."}
   ];
   for(var fi=0;fi<fields.length;fi++){
     var f=fields[fi];
     h+="<div class='card'><div class='st'>"+f.label+"</div>";
-    h+="<textarea class='narea' style='min-height:60px' placeholder='"+f.ph+"' onchange='savePipelineField(\""+p.id+"\",\""+f.key+"\",this.value)' onblur='savePipelineField(\""+p.id+"\",\""+f.key+"\",this.value)'>"+(p[f.key]||"")+"</textarea></div>";
+    h+="<textarea class='narea' style='min-height:55px' placeholder='"+f.ph+"' onchange='savePipeField(\""+p.id+"\",\""+f.key+"\",this.value)' onblur='savePipeField(\""+p.id+"\",\""+f.key+"\",this.value)'>"+(p[f.key]||"")+"</textarea></div>";
   }
-
-  h+="<button onclick='deletePipeline(\""+p.id+"\")' style='background:none;border:1px solid #f43f5e33;color:#f43f5e55;font-size:11px;padding:8px;border-radius:12px;width:100%'>Produkt loeschen</button>";
+  h+="<button onclick='deletePipeline(\""+p.id+"\")' style='background:none;border:1px solid #f43f5e33;color:#f43f5e55;font-size:11px;padding:8px;border-radius:12px;width:100%'>Loeschen</button>";
   h+="</div>";
   return h;
 }
 
-// ---- OVERVIEW ----
+// OVERVIEW
 function renderOverview(){
-  var h="<div class='nav'>";
-  h+="<div style='font-size:16px;font-weight:700;flex:1;text-align:center'>Uebersicht</div></div>";
+  var h="<div class='nav'><div style='flex:1;text-align:center;font-size:16px;font-weight:700'>Uebersicht</div></div>";
   h+="<div style='display:flex;gap:8px;padding:12px 16px 0'>";
-  h+="<button class='dbtn"+(cTab==="week"?" active":"")+"' onclick='cTab=\"week\";render()'>Woche</button>";
-  h+="<button class='dbtn"+(cTab==="review"?" active":"")+"' onclick='cTab=\"review\";render()'>Rueckblick</button>";
-  h+="<button class='dbtn"+(cTab==="month"?" active":"")+"' onclick='cTab=\"month\";render()'>Monat</button>";
+  h+="<button class='dbtn"+(cOvTab==="week"?" active":"")+"' onclick='cOvTab=\"week\";render()'>Woche</button>";
+  h+="<button class='dbtn"+(cOvTab==="review"?" active":"")+"' onclick='cOvTab=\"review\";render()'>Rueckblick</button>";
+  h+="<button class='dbtn"+(cOvTab==="month"?" active":"")+"' onclick='cOvTab=\"month\";render()'>Monat</button>";
   h+="</div><div class='page'>";
 
-  if(cTab==="week"){
+  if(cOvTab==="week"){
     var wt=weekTotal(),streak=calcStreak();
-    // Streak
     if(streak>0){
       h+="<div class='card' style='text-align:center;border-top:3px solid #f59e0b'>";
-      h+="<div style='font-size:36px'>&#128293;</div>";
-      h+="<div style='font-size:28px;font-weight:800;color:#f59e0b'>"+streak+" Tage</div>";
-      h+="<div style='font-size:12px;color:#555;margin-top:4px'>Streak aktiv - weiter so!</div></div>";
+      h+="<div style='font-size:32px'>&#128293;</div>";
+      h+="<div style='font-size:28px;font-weight:800;color:#f59e0b;margin-top:4px'>"+streak+" Tage Streak</div>";
+      h+="<div style='font-size:12px;color:#555;margin-top:4px'>Weiter so!</div></div>";
     }
-    // Money
     h+="<div class='card' style='text-align:center;border-top:3px solid #34d399'>";
     h+="<div class='st'>Wocheneinnahmen</div>";
     h+="<div style='font-size:44px;font-weight:800;color:"+(wt>0?"#34d399":"#444")+"'>&#8364;"+wt.toLocaleString()+"</div>";
@@ -789,7 +650,6 @@ function renderOverview(){
       h+="<div style='font-size:9px;color:"+(isTd?"#60a5fa":"#444")+"'>"+DAYS[i]+"</div></div>";
     }
     h+="</div></div>";
-    // User progress
     h+="<div class='grid2'>";
     for(var ui=0;ui<USERS.length;ui++){
       var user=USERS[ui],uc=UCOL[user],td=0,ta=0;
@@ -798,11 +658,10 @@ function renderOverview(){
       h+="<div class='card' style='border-top:3px solid "+uc+";text-align:center'>";
       h+="<div style='font-size:13px;font-weight:700;color:"+uc+";margin-bottom:6px'>"+user+"</div>";
       h+="<div style='font-size:30px;font-weight:800;color:"+uc+"'>"+pct+"%</div>";
-      h+="<div style='font-size:11px;color:#555;margin-top:2px'>"+td+"/"+ta+" Aufgaben</div>";
+      h+="<div style='font-size:11px;color:#555;margin-top:2px'>"+td+"/"+ta+"</div>";
       h+="<div class='bbg' style='margin-top:8px'><div class='bb' style='background:"+uc+";width:"+pct+"%'></div></div></div>";
     }
     h+="</div>";
-    // Day breakdown
     h+="<div class='st' style='margin-top:4px'>Tag fuer Tag</div>";
     for(var di=0;di<7;di++){
       var isTd=di===todayIdx(),dc=isTd?"#60a5fa":"#2a2a2a",mv=DATA.money["d"+di]||0;
@@ -814,10 +673,8 @@ function renderOverview(){
       for(var ui=0;ui<USERS.length;ui++){
         var user=USERS[ui],uc=UCOL[user],res=userDayDone(di,user);
         var pct2=res.total>0?Math.round((res.done/res.total)*100):0;
-        var mood=DATA.moods[di]&&DATA.moods[di][user]||"";
-        var moodE=MOODS.find(function(m){return m.l===mood;});
         h+="<div style='background:#0a0a0a;border-radius:8px;padding:6px 8px'>";
-        h+="<div style='font-size:10px;color:"+uc+";font-weight:700;margin-bottom:4px'>"+user+(moodE?" "+moodE.e:"")+"</div>";
+        h+="<div style='font-size:10px;color:"+uc+";font-weight:700;margin-bottom:4px'>"+user+"</div>";
         h+="<div style='font-size:13px;font-weight:700;color:"+(pct2===100?"#34d399":"#888")+"'>"+pct2+"%</div>";
         h+="<div class='bbg' style='margin-top:4px'><div class='bb' style='background:"+uc+";width:"+pct2+"%'></div></div></div>";
       }
@@ -837,48 +694,60 @@ function renderOverview(){
     h+="<button onclick='resetWeek()' style='background:none;border:1px solid #1a1a1a;color:#333;font-size:11px;padding:8px;border-radius:12px;width:100%'>Woche zuruecksetzen</button>";
   }
 
-  if(cTab==="review"){
-    var sunKey=getSundayKey(),lastSunKey=getLastSundayKey();
-    var fields=[
-      {key:"good",label:"Was lief diese Woche gut?",ph:"Erfolge, Highlights..."},
+  if(cOvTab==="review"){
+    var isSun=isSunday();
+    // Current week review (only fully editable on Sunday, but always visible)
+    h+="<div class='card' style='border-top:3px solid #60a5fa'>";
+    h+="<div class='st'>Rueckblick diese Woche</div>";
+    if(!isSun)h+="<div style='font-size:11px;color:#555;margin-bottom:10px'>Sonntags zum Ausfullen</div>";
+    var rfields=[
+      {key:"good",label:"Was lief gut?",ph:"Erfolge, Highlights..."},
       {key:"bad",label:"Was lief schlecht?",ph:"Probleme, Fehler..."},
       {key:"change",label:"Was aendern wir naechste Woche?",ph:"Konkrete Massnahmen..."}
     ];
-    h+="<div class='card' style='border-top:3px solid #60a5fa'>";
-    h+="<div class='st'>Wochenrueckblick - diese Woche</div>";
-    for(var fi=0;fi<fields.length;fi++){
-      var f=fields[fi];
+    for(var fi=0;fi<rfields.length;fi++){
+      var f=rfields[fi];
       h+="<div style='margin-bottom:12px'>";
       h+="<div style='font-size:12px;color:#888;margin-bottom:6px'>"+f.label+"</div>";
-      h+="<textarea class='narea' style='min-height:65px' placeholder='"+f.ph+"' onchange='saveReview(\""+sunKey+"\",\""+f.key+"\",this.value)' onblur='saveReview(\""+sunKey+"\",\""+f.key+"\",this.value)'>"+(DATA.reviews[sunKey]&&DATA.reviews[sunKey][f.key]||"")+"</textarea></div>";
-    }
-    h+="</div>";
-    // Last week
-    if(DATA.reviews[lastSunKey]){
-      h+="<div class='card' style='border-top:3px solid #555'>";
-      h+="<div class='st'>Letzter Rueckblick</div>";
-      for(var fi=0;fi<fields.length;fi++){
-        var f=fields[fi];
-        var val=DATA.reviews[lastSunKey]&&DATA.reviews[lastSunKey][f.key]||"";
-        if(val){
-          h+="<div style='margin-bottom:12px'>";
-          h+="<div style='font-size:11px;color:#555;margin-bottom:4px'>"+f.label+"</div>";
-          h+="<div style='font-size:13px;color:#888;line-height:1.6;background:#0a0a0a;border-radius:8px;padding:10px'>"+val+"</div></div>";
-        }
+      if(isSun){
+        h+="<textarea class='narea' style='min-height:60px' placeholder='"+f.ph+"' onchange='saveReview(\""+W+"\",\""+f.key+"\",this.value)' onblur='saveReview(\""+W+"\",\""+f.key+"\",this.value)'>"+(REVIEWS[W]&&REVIEWS[W][f.key]||"")+"</textarea>";
+      }else{
+        var val=REVIEWS[W]&&REVIEWS[W][f.key]||"";
+        h+="<div style='font-size:13px;color:"+(val?"#888":"#333")+";background:#0a0a0a;border-radius:8px;padding:10px;min-height:40px;line-height:1.6'>"+(val||"Noch nicht ausgefuellt...")+"</div>";
       }
       h+="</div>";
     }
+    h+="</div>";
+
+    // Previous weeks
+    var prevKeys=Object.keys(REVIEWS).filter(function(k){return k!==W;}).sort(function(a,b){return b.localeCompare(a);});
+    if(prevKeys.length>0){
+      h+="<div class='st' style='margin-top:4px'>Vorherige Wochen</div>";
+      for(var wi=0;wi<prevKeys.length;wi++){
+        var wk=prevKeys[wi],rev=REVIEWS[wk];
+        h+="<div class='card' style='border-left:3px solid #2a2a2a'>";
+        h+="<div style='font-size:12px;font-weight:700;color:#666;margin-bottom:10px'>"+weekKeyToLabel(wk)+"</div>";
+        for(var fi=0;fi<rfields.length;fi++){
+          var f=rfields[fi],val=rev&&rev[f.key]||"";
+          if(val){
+            h+="<div style='margin-bottom:8px'>";
+            h+="<div style='font-size:10px;color:#555;margin-bottom:3px;text-transform:uppercase;letter-spacing:1px'>"+f.label+"</div>";
+            h+="<div style='font-size:13px;color:#888;line-height:1.6'>"+val+"</div></div>";
+          }
+        }
+        h+="</div>";
+      }
+    }
   }
 
-  if(cTab==="month"){
+  if(cOvTab==="month"){
     h+="<div class='card' style='text-align:center;border-top:3px solid #34d399'>";
     h+="<div class='st'>Monatsblick (aktuelle Woche)</div>";
-    h+="<div style='font-size:40px;font-weight:800;color:#34d399'>&#8364;"+weekTotal().toLocaleString()+"</div>";
-    h+="<div style='font-size:12px;color:#555;margin-top:4px'>Diese Woche verdient</div></div>";
+    h+="<div style='font-size:40px;font-weight:800;color:#34d399'>&#8364;"+weekTotal().toLocaleString()+"</div></div>";
     for(var ui=0;ui<USERS.length;ui++){
       var user=USERS[ui],uc=UCOL[user];
       h+="<div class='card' style='border-left:4px solid "+uc+"'>";
-      h+="<div style='font-size:14px;font-weight:700;color:"+uc+";margin-bottom:12px'>"+user+" - Wochenstatistik</div>";
+      h+="<div style='font-size:14px;font-weight:700;color:"+uc+";margin-bottom:12px'>"+user+"</div>";
       for(var ti=0;ti<TASKS.length;ti++){
         var task=TASKS[ti],taskDone=0;
         for(var di=0;di<7;di++){
@@ -899,29 +768,56 @@ function renderOverview(){
   return h;
 }
 
-// Global nav helpers
-window.goDay=function(d){view="day";if(d!==undefined)cDay=d;document.querySelectorAll(".btab").forEach(function(b){b.classList.remove("active");});var el=document.getElementById("tab_day");if(el)el.classList.add("active");render();window.scrollTo(0,0);};
-window.openProduct=function(pid){cProduct=pid;view="products";render();window.scrollTo(0,0);};
-window.openPipeline=function(pid){cPipeline=pid;view="pipeline";render();window.scrollTo(0,0);};
-window.toggleTask=toggleTask;
-window.setCount=setCount;
+// Global
+window.goDay=function(d){
+  view="day";if(d!==undefined)cDay=d;
+  document.querySelectorAll(".btab").forEach(function(b){b.classList.remove("active");});
+  var el=document.getElementById("tab_day");if(el)el.classList.add("active");
+  render();window.scrollTo(0,0);
+};
+window.openProduct=function(pid){cProduct=pid;render();window.scrollTo(0,0);};
+window.openPipeline=function(pid){cPipeline=pid;render();window.scrollTo(0,0);};
+window.toggleTask=toggleTask;window.setCount=setCount;
 window.mStart=mStart;window.mStop=mStop;window.mAdj=mAdj;
-window.setMood=setMood;
 window.saveSharedNote=saveSharedNote;window.saveAbsence=saveAbsence;
 window.addCLItem=addCLItem;window.toggleCL=toggleCL;
 window.addWL=addWL;window.toggleWL=toggleWL;window.removeWL=removeWL;
 window.addIdea=addIdea;window.removeIdea=removeIdea;
 window.addProduct=addProduct;window.saveProductField=saveProductField;window.deleteProduct=deleteProduct;window.setProductStar=setProductStar;
-window.addPipelineProduct=addPipelineProduct;window.savePipelineField=savePipelineField;window.setPipelineStage=setPipelineStage;window.deletePipeline=deletePipeline;window.stageHTML=stageHTML;
+window.addPipeline=addPipeline;window.savePipeField=savePipeField;window.setPipeStage=setPipeStage;window.stageHTML=stageHTML;window.deletePipeline=deletePipeline;
 window.resetDay=resetDay;window.resetWeek=resetWeek;
 window.saveReview=saveReview;
 
-// Init
 var d=new Date(),dy=d.getDay();
 var map={1:0,2:1,3:2,4:3,5:4,6:5,0:6};
 cDay=map[dy];
 document.getElementById("tab_day").classList.add("active");
 loadData();
+
+// Swipe gestures
+var TABS = ["day","products","overview"];
+var swipeStartX=0,swipeStartY=0;
+document.addEventListener("touchstart",function(e){
+  swipeStartX=e.touches[0].clientX;
+  swipeStartY=e.touches[0].clientY;
+},{passive:true});
+document.addEventListener("touchend",function(e){
+  // Only swipe when not in detail view
+  if(cProduct||cPipeline)return;
+  var dx=e.changedTouches[0].clientX-swipeStartX;
+  var dy2=e.changedTouches[0].clientY-swipeStartY;
+  // Must be horizontal swipe (more horizontal than vertical, min 60px)
+  if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy2)*1.5)return;
+  var cur=TABS.indexOf(view);
+  if(cur===-1)return;
+  if(dx<0&&cur<TABS.length-1){
+    // Swipe left = next tab
+    setTab(TABS[cur+1]);
+  }else if(dx>0&&cur>0){
+    // Swipe right = prev tab
+    setTab(TABS[cur-1]);
+  }
+},{passive:true});
 </script>
 </body>
 </html>
