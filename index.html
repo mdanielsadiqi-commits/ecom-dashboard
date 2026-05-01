@@ -10,6 +10,10 @@ body{background:#0a0a0a;color:#f0f0f0;font-family:Georgia,serif;min-height:100vh
 button{cursor:pointer;font-family:Georgia,serif;border:none;outline:none}
 input,textarea{font-family:Georgia,serif;outline:none}
 .page{padding:16px 16px 100px;display:flex;flex-direction:column;gap:12px}
+.slide-in-left{animation:slideInLeft 0.25s ease}
+.slide-in-right{animation:slideInRight 0.25s ease}
+@keyframes slideInLeft{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:translateX(0)}}
+@keyframes slideInRight{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:translateX(0)}}
 .nav{background:#111;border-bottom:1px solid #222;padding:12px 16px;display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:99}
 .bnav{background:#0a0a0a;border-top:1px solid #222;padding:10px 16px;display:flex;gap:8px;position:fixed;bottom:0;left:0;right:0;z-index:99}
 .btab{flex:1;padding:9px 4px;border-radius:12px;font-size:11px;background:none;color:#555;border:1px solid transparent;text-align:center}
@@ -380,11 +384,18 @@ function resetWeek(){
 // RENDER
 function render(){
   var app=document.getElementById("app");if(!app)return;
-  if(view==="products"&&cProduct){app.innerHTML=renderProductDetail();return;}
-  if(view==="products"&&cPipeline){app.innerHTML=renderPipelineDetail();return;}
-  if(view==="products"){app.innerHTML=renderProducts();return;}
-  if(view==="overview"){app.innerHTML=renderOverview();return;}
-  app.innerHTML=renderDay();
+  if(view==="products"&&cProduct){app.innerHTML=renderProductDetail();}
+  else if(view==="products"&&cPipeline){app.innerHTML=renderPipelineDetail();}
+  else if(view==="products"){app.innerHTML=renderProducts();}
+  else if(view==="overview"){app.innerHTML=renderOverview();}
+  else{app.innerHTML=renderDay();}
+  // Apply swipe animation
+  if(swipeDir){
+    app.classList.remove("slide-in-left","slide-in-right");
+    void app.offsetWidth;
+    app.classList.add(swipeDir==="left"?"slide-in-left":"slide-in-right");
+    swipeDir="";
+  }
 }
 
 // DAY
@@ -482,7 +493,7 @@ function renderProducts(){
   var h="<div class='nav'><div style='flex:1;text-align:center;font-size:16px;font-weight:700'>Produkte</div></div>";
   h+="<div style='display:flex;gap:8px;padding:12px 16px 0'>";
   h+="<button class='dbtn"+(cProdSection==="research"?" active":"")+"' onclick='cProdSection=\"research\";render()'>Research</button>";
-  h+="<button class='dbtn"+(cProdSection==="pipeline"?" active":"")+"' onclick='cProdSection=\"pipeline\";render()'>Pipeline</button>";
+  h+="<button class='dbtn"+(cProdSection==="pipeline"?" active":"")+"' onclick='cProdSection=\"pipeline\";render()'>Aktive Produkte</button>";
   h+="</div><div class='page'>";
 
   if(cProdSection==="research"){
@@ -796,25 +807,23 @@ loadData();
 
 // Swipe gestures
 var TABS = ["day","products","overview"];
-var swipeStartX=0,swipeStartY=0;
+var swipeStartX=0,swipeStartY=0,swipeDir="";
 document.addEventListener("touchstart",function(e){
   swipeStartX=e.touches[0].clientX;
   swipeStartY=e.touches[0].clientY;
 },{passive:true});
 document.addEventListener("touchend",function(e){
-  // Only swipe when not in detail view
   if(cProduct||cPipeline)return;
   var dx=e.changedTouches[0].clientX-swipeStartX;
   var dy2=e.changedTouches[0].clientY-swipeStartY;
-  // Must be horizontal swipe (more horizontal than vertical, min 60px)
   if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy2)*1.5)return;
   var cur=TABS.indexOf(view);
   if(cur===-1)return;
   if(dx<0&&cur<TABS.length-1){
-    // Swipe left = next tab
+    swipeDir="left";
     setTab(TABS[cur+1]);
   }else if(dx>0&&cur>0){
-    // Swipe right = prev tab
+    swipeDir="right";
     setTab(TABS[cur-1]);
   }
 },{passive:true});
