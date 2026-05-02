@@ -533,6 +533,26 @@ function renderDay(){
   h+="<button onclick='addIdea()' style='background:#f59e0b22;border:1px solid #f59e0b44;border-radius:8px;padding:8px 14px;color:#f59e0b;font-size:14px'>+</button>";
   h+="</div></div>";
 
+  // Sunday review
+  if(cDay===6){
+    var rfields=[
+      {key:"good",label:"Was lief diese Woche gut?",ph:"Erfolge, Highlights..."},
+      {key:"bad",label:"Was lief schlecht?",ph:"Probleme, Fehler..."},
+      {key:"change",label:"Was aendern wir naechste Woche?",ph:"Konkrete Massnahmen..."}
+    ];
+    h+="<div class='card' style='border-top:3px solid #60a5fa'>";
+    h+="<div class='st'>Wochenrueckblick</div>";
+    h+="<div style='font-size:12px;color:#555;margin-bottom:12px'>Wird gespeichert und in der Uebersicht angezeigt</div>";
+    for(var fi=0;fi<rfields.length;fi++){
+      var f=rfields[fi];
+      h+="<div style='margin-bottom:12px'>";
+      h+="<div style='font-size:12px;color:#888;margin-bottom:6px'>"+f.label+"</div>";
+      h+="<textarea class='narea' style='min-height:60px' placeholder='"+f.ph+"' onchange='saveReview(\""+W+"\",\""+f.key+"\",this.value)' onblur='saveReview(\""+W+"\",\""+f.key+"\",this.value)'>"+(REVIEWS[W]&&REVIEWS[W][f.key]||"")+"</textarea>";
+      h+="</div>";
+    }
+    h+="</div>";
+  }
+
   h+="<button onclick='resetDay("+cDay+")' style='background:none;border:1px solid #1a1a1a;color:#333;font-size:11px;padding:8px;border-radius:12px;width:100%'>Tag zuruecksetzen</button>";
   h+="</div>";
   return h;
@@ -766,27 +786,31 @@ function renderOverview(){
   }
 
   if(cOvTab==="review"){
-    var isSun=isSunday();
-    // Current week review (only fully editable on Sunday, but always visible)
-    h+="<div class='card' style='border-top:3px solid #60a5fa'>";
-    h+="<div class='st'>Rueckblick diese Woche</div>";
-    if(!isSun)h+="<div style='font-size:11px;color:#555;margin-bottom:10px'>Sonntags zum Ausfullen</div>";
     var rfields=[
       {key:"good",label:"Was lief gut?",ph:"Erfolge, Highlights..."},
       {key:"bad",label:"Was lief schlecht?",ph:"Probleme, Fehler..."},
       {key:"change",label:"Was aendern wir naechste Woche?",ph:"Konkrete Massnahmen..."}
     ];
-    for(var fi=0;fi<rfields.length;fi++){
-      var f=rfields[fi];
-      h+="<div style='margin-bottom:12px'>";
-      h+="<div style='font-size:12px;color:#888;margin-bottom:6px'>"+f.label+"</div>";
-      if(isSun){
-        h+="<textarea class='narea' style='min-height:60px' placeholder='"+f.ph+"' onchange='saveReview(\""+W+"\",\""+f.key+"\",this.value)' onblur='saveReview(\""+W+"\",\""+f.key+"\",this.value)'>"+(REVIEWS[W]&&REVIEWS[W][f.key]||"")+"</textarea>";
-      }else{
-        var val=REVIEWS[W]&&REVIEWS[W][f.key]||"";
-        h+="<div style='font-size:13px;color:"+(val?"#888":"#333")+";background:#0a0a0a;border-radius:8px;padding:10px;min-height:40px;line-height:1.6'>"+(val||"Noch nicht ausgefuellt...")+"</div>";
+
+    // Current week - read only, link to Sunday
+    var curRev=REVIEWS[W];
+    var hasCur=curRev&&(curRev.good||curRev.bad||curRev.change);
+    h+="<div class='card' style='border-top:3px solid #60a5fa'>";
+    h+="<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px'>";
+    h+="<div class='st' style='margin-bottom:0'>Diese Woche</div>";
+    h+="<button onclick='goDay(6)' style='font-size:11px;padding:4px 10px;border-radius:20px;background:#60a5fa22;color:#60a5fa;border:1px solid #60a5fa44'>Sonntag ausfullen</button>";
+    h+="</div>";
+    if(hasCur){
+      for(var fi=0;fi<rfields.length;fi++){
+        var f=rfields[fi],val=curRev[f.key]||"";
+        if(val){
+          h+="<div style='margin-bottom:10px'>";
+          h+="<div style='font-size:10px;color:#555;margin-bottom:3px;text-transform:uppercase;letter-spacing:1px'>"+f.label+"</div>";
+          h+="<div style='font-size:13px;color:#888;line-height:1.6'>"+val+"</div></div>";
+        }
       }
-      h+="</div>";
+    }else{
+      h+="<div style='font-size:12px;color:#333;padding:8px 0'>Noch kein Rueckblick diese Woche. Sonntag ausfullen!</div>";
     }
     h+="</div>";
 
@@ -808,6 +832,8 @@ function renderOverview(){
         }
         h+="</div>";
       }
+    }else if(!hasCur){
+      h+="<div style='text-align:center;color:#333;padding:20px 0;font-size:13px'>Noch keine gespeicherten Rueckblicke</div>";
     }
   }
 
