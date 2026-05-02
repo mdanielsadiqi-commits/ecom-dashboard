@@ -78,6 +78,9 @@ var cOvTab = "week";
 var cProduct = null;
 var cPipeline = null;
 var cProdSection = "research";
+var cSelWeek = "";  // selected week key for week view
+var cSelMonth = ""; // selected month key for month view
+var cEditReview = ""; // review being edited
 var W = "";
 var mI = null;
 
@@ -96,6 +99,35 @@ function weekKeyToLabel(k){
   var d=new Date(parseInt(parts[0]),parseInt(parts[1]),parseInt(parts[2]));
   var end=new Date(d.getFullYear(),d.getMonth(),d.getDate()+6);
   return d.getDate()+"."+(d.getMonth()+1)+". - "+end.getDate()+"."+(end.getMonth()+1)+"."+end.getFullYear();
+}
+function monthLabel(mk){
+  var parts=mk.split("_");
+  if(parts.length<2)return mk;
+  var months=["Jan","Feb","Mar","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+  return months[parseInt(parts[1])]+" "+parts[0];
+}
+function weekToMonth(wk){
+  var p=wk.split("_");return p.length>=3?p[0]+"_"+p[1]:"";
+}
+function getAllWeekKeys(){
+  var keys=[W];
+  Object.keys(REVIEWS).forEach(function(k){if(keys.indexOf(k)===-1)keys.push(k);});
+  return keys.sort(function(a,b){return b.localeCompare(a);});
+}
+function getAllMonthKeys(){
+  var seen={};
+  getAllWeekKeys().forEach(function(wk){seen[weekToMonth(wk)]=true;});
+  return Object.keys(seen).sort(function(a,b){return b.localeCompare(a);});
+}
+function weeksInMonth(mk){
+  return getAllWeekKeys().filter(function(wk){return weekToMonth(wk)===mk;});
+}
+function deleteReview(wk){
+  delete REVIEWS[wk];saveReviews();cEditReview="";render();
+}
+function markReviewDone(wk){
+  if(!REVIEWS[wk])REVIEWS[wk]={};
+  REVIEWS[wk].done=true;saveReviews();render();
 }
 function todayIdx(){var map={1:0,2:1,3:2,4:3,5:4,6:5,0:6};return map[new Date().getDay()];}
 function isSunday(){return new Date().getDay()===0;}
@@ -541,7 +573,15 @@ function renderDay(){
       {key:"change",label:"Was aendern wir naechste Woche?",ph:"Konkrete Massnahmen..."}
     ];
     h+="<div class='card' style='border-top:3px solid #60a5fa'>";
-    h+="<div class='st'>Wochenrueckblick</div>";
+    h+="<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px'>";
+    h+="<div class='st' style='margin-bottom:0'>Wochenrueckblick</div>";
+    var curDone=REVIEWS[W]&&REVIEWS[W].done;
+    if(curDone){
+      h+="<span style='font-size:11px;color:#34d399'>&#10003; Fertig</span>";
+    }else{
+      h+="<button onclick='markReviewDone(\""+W+"\")' style='font-size:11px;padding:4px 12px;border-radius:20px;background:#34d39922;color:#34d399;border:1px solid #34d39944'>Fertig</button>";
+    }
+    h+="</div>";
     h+="<div style='font-size:12px;color:#555;margin-bottom:12px'>Wird gespeichert und in der Uebersicht angezeigt</div>";
     for(var fi=0;fi<rfields.length;fi++){
       var f=rfields[fi];
@@ -713,6 +753,11 @@ function renderPipelineDetail(){
 
 // OVERVIEW
 function renderOverview(){
+  var allWeeks=getAllWeekKeys();
+  var allMonths=getAllMonthKeys();
+  if(!cSelWeek)cSelWeek=W;
+  if(!cSelMonth)cSelMonth=weekToMonth(W);
+
   var h="<div class='nav'><div style='flex:1;text-align:center;font-size:16px;font-weight:700'>Uebersicht</div></div>";
   h+="<div style='display:flex;gap:8px;padding:12px 16px 0'>";
   h+="<button class='dbtn"+(cOvTab==="week"?" active":"")+"' onclick='cOvTab=\"week\";render()'>Woche</button>";
@@ -721,68 +766,93 @@ function renderOverview(){
   h+="</div><div class='page'>";
 
   if(cOvTab==="week"){
-    var wt=weekTotal(),streak=calcStreak();
-    if(streak>0){
-      h+="<div class='card' style='text-align:center;border-top:3px solid #f59e0b'>";
-      h+="<div style='font-size:32px'>&#128293;</div>";
-      h+="<div style='font-size:28px;font-weight:800;color:#f59e0b;margin-top:4px'>"+streak+" Tage Streak</div>";
-      h+="<div style='font-size:12px;color:#555;margin-top:4px'>Weiter so!</div></div>";
-    }
-    h+="<div class='card' style='text-align:center;border-top:3px solid #34d399'>";
-    h+="<div class='st'>Wocheneinnahmen</div>";
-    h+="<div style='font-size:44px;font-weight:800;color:"+(wt>0?"#34d399":"#444")+"'>&#8364;"+wt.toLocaleString()+"</div>";
-    h+="<div style='display:flex;align-items:flex-end;gap:4px;height:60px;margin-top:14px'>";
-    var maxM=1;for(var i=0;i<7;i++){if((DATA.money["d"+i]||0)>maxM)maxM=DATA.money["d"+i];}
-    for(var i=0;i<7;i++){
-      var mv=DATA.money["d"+i]||0,isTd=i===todayIdx(),mpc=maxM>0?(mv/maxM)*100:0;
-      h+="<div style='flex:1;display:flex;flex-direction:column;align-items:center;gap:2px'>";
-      h+="<div style='font-size:9px;color:"+(mv>0?"#34d399":"#333")+"'>"+(mv>0?(mv>=1000?Math.round(mv/1000)+"k":mv):"")+"</div>";
-      h+="<div style='width:100%;border-radius:3px 3px 0 0;background:"+(mv>0?"#34d399":"#1a1a1a")+";height:"+Math.max(3,mpc*0.5)+"px'></div>";
-      h+="<div style='font-size:9px;color:"+(isTd?"#60a5fa":"#444")+"'>"+DAYS[i]+"</div></div>";
-    }
-    h+="</div></div>";
-    h+="<div class='grid2'>";
-    for(var ui=0;ui<USERS.length;ui++){
-      var user=USERS[ui],uc=UCOL[user],td=0,ta=0;
-      for(var di=0;di<7;di++){var r=userDayDone(di,user);td+=r.done;ta+=r.total;}
-      var pct=ta>0?Math.round((td/ta)*100):0;
-      h+="<div class='card' style='border-top:3px solid "+uc+";text-align:center'>";
-      h+="<div style='font-size:13px;font-weight:700;color:"+uc+";margin-bottom:6px'>"+user+"</div>";
-      h+="<div style='font-size:30px;font-weight:800;color:"+uc+"'>"+pct+"%</div>";
-      h+="<div style='font-size:11px;color:#555;margin-top:2px'>"+td+"/"+ta+"</div>";
-      h+="<div class='bbg' style='margin-top:8px'><div class='bb' style='background:"+uc+";width:"+pct+"%'></div></div></div>";
+    // Week selector
+    h+="<div style='overflow-x:auto;display:flex;gap:6px;padding-bottom:4px'>";
+    for(var wi=0;wi<allWeeks.length;wi++){
+      var wk=allWeeks[wi],isCW=wk===cSelWeek;
+      h+="<button onclick='cSelWeek=\""+wk+"\";render()' style='flex-shrink:0;padding:5px 10px;border-radius:10px;font-size:11px;white-space:nowrap;background:"+(isCW?"#60a5fa22":"#1a1a1a")+";color:"+(isCW?"#60a5fa":"#555")+";border:1px solid "+(isCW?"#60a5fa44":"#222")+"'>"+weekKeyToLabel(wk)+(wk===W?" (Aktuell)":"")+"</button>";
     }
     h+="</div>";
-    h+="<div class='st' style='margin-top:4px'>Tag fuer Tag</div>";
-    for(var di=0;di<7;di++){
-      var isTd=di===todayIdx(),dc=isTd?"#60a5fa":"#2a2a2a",mv=DATA.money["d"+di]||0;
-      h+="<div onclick='goDay("+di+")' style='background:#111;border:1px solid #222;border-left:3px solid "+dc+";border-radius:14px;padding:12px 14px;cursor:pointer'>";
-      h+="<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'>";
-      h+="<div style='font-size:14px;font-weight:700'>"+DNAMES[di]+(isTd?" <span style='font-size:10px;color:#60a5fa'>Heute</span>":"")+"</div>";
-      h+="<div style='font-size:13px;color:#34d399;font-weight:700'>&#8364;"+mv.toLocaleString()+"</div></div>";
+
+    // Show selected week stats
+    var isCurrentWk=cSelWeek===W;
+    var wt=0;
+    if(isCurrentWk){
+      wt=weekTotal();
+      var streak=calcStreak();
+      if(streak>0){
+        h+="<div class='card' style='text-align:center;border-top:3px solid #f59e0b'>";
+        h+="<div style='font-size:28px;font-weight:800;color:#f59e0b'>&#128293; "+streak+" Tage Streak</div>";
+        h+="<div style='font-size:12px;color:#555;margin-top:4px'>Weiter so!</div></div>";
+      }
+      h+="<div class='card' style='text-align:center;border-top:3px solid #34d399'>";
+      h+="<div class='st'>Einnahmen</div>";
+      h+="<div style='font-size:44px;font-weight:800;color:"+(wt>0?"#34d399":"#444")+"'>&#8364;"+wt.toLocaleString()+"</div>";
+      h+="<div style='display:flex;align-items:flex-end;gap:4px;height:60px;margin-top:14px'>";
+      var maxM=1;for(var i=0;i<7;i++){if((DATA.money["d"+i]||0)>maxM)maxM=DATA.money["d"+i];}
+      for(var i=0;i<7;i++){
+        var mv=DATA.money["d"+i]||0,isTd=i===todayIdx(),mpc=maxM>0?(mv/maxM)*100:0;
+        h+="<div style='flex:1;display:flex;flex-direction:column;align-items:center;gap:2px'>";
+        h+="<div style='font-size:9px;color:"+(mv>0?"#34d399":"#333")+"'>"+(mv>0?(mv>=1000?Math.round(mv/1000)+"k":mv):"")+"</div>";
+        h+="<div style='width:100%;border-radius:3px 3px 0 0;background:"+(mv>0?"#34d399":"#1a1a1a")+";height:"+Math.max(3,mpc*0.5)+"px'></div>";
+        h+="<div style='font-size:9px;color:"+(isTd?"#60a5fa":"#444")+"'>"+DAYS[i]+"</div></div>";
+      }
+      h+="</div></div>";
       h+="<div class='grid2'>";
       for(var ui=0;ui<USERS.length;ui++){
-        var user=USERS[ui],uc=UCOL[user],res=userDayDone(di,user);
-        var pct2=res.total>0?Math.round((res.done/res.total)*100):0;
-        h+="<div style='background:#0a0a0a;border-radius:8px;padding:6px 8px'>";
-        h+="<div style='font-size:10px;color:"+uc+";font-weight:700;margin-bottom:4px'>"+user+"</div>";
-        h+="<div style='font-size:13px;font-weight:700;color:"+(pct2===100?"#34d399":"#888")+"'>"+pct2+"%</div>";
-        h+="<div class='bbg' style='margin-top:4px'><div class='bb' style='background:"+uc+";width:"+pct2+"%'></div></div></div>";
+        var user=USERS[ui],uc=UCOL[user],td=0,ta=0;
+        for(var di=0;di<7;di++){var r=userDayDone(di,user);td+=r.done;ta+=r.total;}
+        var pct=ta>0?Math.round((td/ta)*100):0;
+        h+="<div class='card' style='border-top:3px solid "+uc+";text-align:center'>";
+        h+="<div style='font-size:13px;font-weight:700;color:"+uc+";margin-bottom:6px'>"+user+"</div>";
+        h+="<div style='font-size:30px;font-weight:800;color:"+uc+"'>"+pct+"%</div>";
+        h+="<div style='font-size:11px;color:#555;margin-top:2px'>"+td+"/"+ta+"</div>";
+        h+="<div class='bbg' style='margin-top:8px'><div class='bb' style='background:"+uc+";width:"+pct+"%'></div></div></div>";
       }
       h+="</div>";
-      var hasAbs=false;
-      for(var ui=0;ui<USERS.length;ui++){if(DATA.absence[di+"_"+USERS[ui]])hasAbs=true;}
-      if(hasAbs){
-        h+="<div style='margin-top:8px;border-top:1px solid #1a1a1a;padding-top:8px'>";
+      h+="<div class='st'>Tag fuer Tag</div>";
+      for(var di=0;di<7;di++){
+        var isTd=di===todayIdx(),dc=isTd?"#60a5fa":"#2a2a2a",mv=DATA.money["d"+di]||0;
+        h+="<div onclick='goDay("+di+")' style='background:#111;border:1px solid #222;border-left:3px solid "+dc+";border-radius:14px;padding:12px 14px;cursor:pointer'>";
+        h+="<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'>";
+        h+="<div style='font-size:14px;font-weight:700'>"+DNAMES[di]+(isTd?" <span style='font-size:10px;color:#60a5fa'>Heute</span>":"")+"</div>";
+        h+="<div style='font-size:13px;color:#34d399;font-weight:700'>&#8364;"+mv.toLocaleString()+"</div></div>";
+        h+="<div class='grid2'>";
         for(var ui=0;ui<USERS.length;ui++){
-          var av=DATA.absence[di+"_"+USERS[ui]];
-          if(av)h+="<div style='font-size:11px;color:#f59e0b;margin-top:3px'>"+USERS[ui]+": "+av+"</div>";
+          var user=USERS[ui],uc=UCOL[user],res=userDayDone(di,user);
+          var pct2=res.total>0?Math.round((res.done/res.total)*100):0;
+          h+="<div style='background:#0a0a0a;border-radius:8px;padding:6px 8px'>";
+          h+="<div style='font-size:10px;color:"+uc+";font-weight:700;margin-bottom:4px'>"+user+"</div>";
+          h+="<div style='font-size:13px;font-weight:700;color:"+(pct2===100?"#34d399":"#888")+"'>"+pct2+"%</div>";
+          h+="<div class='bbg' style='margin-top:4px'><div class='bb' style='background:"+uc+";width:"+pct2+"%'></div></div></div>";
+        }
+        h+="</div>";
+        var hasAbs=false;
+        for(var ui=0;ui<USERS.length;ui++){if(DATA.absence[di+"_"+USERS[ui]])hasAbs=true;}
+        if(hasAbs){
+          h+="<div style='margin-top:8px;border-top:1px solid #1a1a1a;padding-top:8px'>";
+          for(var ui=0;ui<USERS.length;ui++){
+            var av=DATA.absence[di+"_"+USERS[ui]];
+            if(av)h+="<div style='font-size:11px;color:#f59e0b;margin-top:3px'>"+USERS[ui]+": "+av+"</div>";
+          }
+          h+="</div>";
         }
         h+="</div>";
       }
-      h+="</div>";
+      h+="<button onclick='resetWeek()' style='background:none;border:1px solid #1a1a1a;color:#333;font-size:11px;padding:8px;border-radius:12px;width:100%'>Woche zuruecksetzen</button>";
+    }else{
+      h+="<div class='card' style='text-align:center;color:#555;padding:20px'>Vergangene Woche - nur Ruckblick verfuegbar</div>";
+      var rev=REVIEWS[cSelWeek];
+      if(rev&&(rev.good||rev.bad||rev.change)){
+        h+="<div class='card' style='border-top:3px solid #60a5fa'><div class='st'>Wochenrueckblick</div>";
+        var rfs=[{key:"good",label:"Was lief gut?"},{key:"bad",label:"Was lief schlecht?"},{key:"change",label:"Was aendern wir?"}];
+        for(var fi=0;fi<rfs.length;fi++){
+          var val=rev[rfs[fi].key]||"";
+          if(val){h+="<div style='margin-bottom:10px'><div style='font-size:10px;color:#555;margin-bottom:3px;text-transform:uppercase'>"+rfs[fi].label+"</div><div style='font-size:13px;color:#888;line-height:1.6'>"+val+"</div></div>";}
+        }
+        h+="</div>";
+      }
     }
-    h+="<button onclick='resetWeek()' style='background:none;border:1px solid #1a1a1a;color:#333;font-size:11px;padding:8px;border-radius:12px;width:100%'>Woche zuruecksetzen</button>";
   }
 
   if(cOvTab==="review"){
@@ -791,73 +861,125 @@ function renderOverview(){
       {key:"bad",label:"Was lief schlecht?",ph:"Probleme, Fehler..."},
       {key:"change",label:"Was aendern wir naechste Woche?",ph:"Konkrete Massnahmen..."}
     ];
+    var allRevKeys=Object.keys(REVIEWS).sort(function(a,b){return b.localeCompare(a);});
 
-    // Current week - read only, link to Sunday
-    var curRev=REVIEWS[W];
-    var hasCur=curRev&&(curRev.good||curRev.bad||curRev.change);
+    // Current week
+    var curRev=REVIEWS[W]||{};
+    var hasCur=curRev.good||curRev.bad||curRev.change;
     h+="<div class='card' style='border-top:3px solid #60a5fa'>";
     h+="<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px'>";
     h+="<div class='st' style='margin-bottom:0'>Diese Woche</div>";
-    h+="<button onclick='goDay(6)' style='font-size:11px;padding:4px 10px;border-radius:20px;background:#60a5fa22;color:#60a5fa;border:1px solid #60a5fa44'>Sonntag ausfullen</button>";
+    if(hasCur&&!curRev.done){
+      h+="<button onclick='markReviewDone(\""+W+"\")' style='font-size:11px;padding:4px 10px;border-radius:20px;background:#34d39922;color:#34d399;border:1px solid #34d39944'>Fertig</button>";
+    }else if(curRev.done){
+      h+="<span style='font-size:11px;color:#34d399'>Erledigt</span>";
+    }
     h+="</div>";
     if(hasCur){
       for(var fi=0;fi<rfields.length;fi++){
         var f=rfields[fi],val=curRev[f.key]||"";
-        if(val){
-          h+="<div style='margin-bottom:10px'>";
-          h+="<div style='font-size:10px;color:#555;margin-bottom:3px;text-transform:uppercase;letter-spacing:1px'>"+f.label+"</div>";
-          h+="<div style='font-size:13px;color:#888;line-height:1.6'>"+val+"</div></div>";
-        }
+        if(val){h+="<div style='margin-bottom:8px'><div style='font-size:10px;color:#555;margin-bottom:3px;text-transform:uppercase'>"+f.label+"</div><div style='font-size:13px;color:#888;line-height:1.6'>"+val+"</div></div>";}
       }
+      h+="<button onclick='goDay(6)' style='font-size:11px;padding:5px 12px;border-radius:10px;background:#1a1a1a;color:#555;border:1px solid #222;margin-top:4px'>Bearbeiten (Sonntag)</button>";
     }else{
-      h+="<div style='font-size:12px;color:#333;padding:8px 0'>Noch kein Rueckblick diese Woche. Sonntag ausfullen!</div>";
+      h+="<div style='font-size:12px;color:#333;padding:8px 0'>Noch kein Rueckblick. Sonntag ausfullen!</div>";
+      h+="<button onclick='goDay(6)' style='font-size:11px;padding:5px 12px;border-radius:10px;background:#60a5fa22;color:#60a5fa;border:1px solid #60a5fa44;margin-top:6px'>Zum Sonntag</button>";
     }
     h+="</div>";
 
-    // Previous weeks
-    var prevKeys=Object.keys(REVIEWS).filter(function(k){return k!==W;}).sort(function(a,b){return b.localeCompare(a);});
-    if(prevKeys.length>0){
+    // Past weeks
+    var pastKeys=allRevKeys.filter(function(k){return k!==W;});
+    if(pastKeys.length>0){
       h+="<div class='st' style='margin-top:4px'>Vorherige Wochen</div>";
-      for(var wi=0;wi<prevKeys.length;wi++){
-        var wk=prevKeys[wi],rev=REVIEWS[wk];
-        h+="<div class='card' style='border-left:3px solid #2a2a2a'>";
-        h+="<div style='font-size:12px;font-weight:700;color:#666;margin-bottom:10px'>"+weekKeyToLabel(wk)+"</div>";
-        for(var fi=0;fi<rfields.length;fi++){
-          var f=rfields[fi],val=rev&&rev[f.key]||"";
-          if(val){
-            h+="<div style='margin-bottom:8px'>";
-            h+="<div style='font-size:10px;color:#555;margin-bottom:3px;text-transform:uppercase;letter-spacing:1px'>"+f.label+"</div>";
-            h+="<div style='font-size:13px;color:#888;line-height:1.6'>"+val+"</div></div>";
+      for(var wi=0;wi<pastKeys.length;wi++){
+        var wk=pastKeys[wi],rev=REVIEWS[wk]||{};
+        var isEdit=cEditReview===wk;
+        h+="<div class='card' style='border-left:3px solid "+(rev.done?"#34d399":"#2a2a2a")+"'>";
+        h+="<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'>";
+        h+="<div style='font-size:12px;font-weight:700;color:#666'>"+weekKeyToLabel(wk)+(rev.done?" <span style='color:#34d399;font-size:10px'>Fertig</span>":"")+"</div>";
+        h+="<div style='display:flex;gap:6px'>";
+        if(!rev.done)h+="<button onclick='markReviewDone(\""+wk+"\")' style='font-size:10px;padding:3px 8px;border-radius:8px;background:#34d39922;color:#34d399;border:1px solid #34d39944'>Fertig</button>";
+        h+="<button onclick='cEditReview=\""+(isEdit?"":wk)+"\";render()' style='font-size:10px;padding:3px 8px;border-radius:8px;background:#60a5fa22;color:#60a5fa;border:1px solid #60a5fa44'>"+(isEdit?"Schliessen":"Edit")+"</button>";
+        h+="<button onclick='deleteReview(\""+wk+"\")' style='font-size:10px;padding:3px 8px;border-radius:8px;background:#f43f5e22;color:#f43f5e;border:1px solid #f43f5e44'>Loeschen</button>";
+        h+="</div></div>";
+        if(isEdit){
+          for(var fi=0;fi<rfields.length;fi++){
+            var f=rfields[fi];
+            h+="<div style='margin-bottom:10px'><div style='font-size:11px;color:#666;margin-bottom:4px'>"+f.label+"</div>";
+            h+="<textarea class='narea' style='min-height:55px' placeholder='"+f.ph+"' onchange='saveReview(\""+wk+"\",\""+f.key+"\",this.value)' onblur='saveReview(\""+wk+"\",\""+f.key+"\",this.value)'>"+(rev[f.key]||"")+"</textarea></div>";
+          }
+        }else{
+          for(var fi=0;fi<rfields.length;fi++){
+            var val=rev[rfields[fi].key]||"";
+            if(val){h+="<div style='margin-bottom:8px'><div style='font-size:10px;color:#555;margin-bottom:3px;text-transform:uppercase'>"+rfields[fi].label+"</div><div style='font-size:13px;color:#888;line-height:1.5'>"+val+"</div></div>";}
           }
         }
         h+="</div>";
       }
-    }else if(!hasCur){
-      h+="<div style='text-align:center;color:#333;padding:20px 0;font-size:13px'>Noch keine gespeicherten Rueckblicke</div>";
     }
   }
 
   if(cOvTab==="month"){
+    // Month selector
+    h+="<div style='overflow-x:auto;display:flex;gap:6px;padding-bottom:4px'>";
+    for(var mi=0;mi<allMonths.length;mi++){
+      var mk=allMonths[mi],isCM=mk===cSelMonth;
+      h+="<button onclick='cSelMonth=\""+mk+"\";render()' style='flex-shrink:0;padding:5px 12px;border-radius:10px;font-size:11px;white-space:nowrap;background:"+(isCM?"#a78bfa22":"#1a1a1a")+";color:"+(isCM?"#a78bfa":"#555")+";border:1px solid "+(isCM?"#a78bfa44":"#222")+"'>"+monthLabel(mk)+"</button>";
+    }
+    h+="</div>";
+
+    var monthWeeks=weeksInMonth(cSelMonth);
+    var monthTotal=0;
+    // For current week use live data, others show reviews
     h+="<div class='card' style='text-align:center;border-top:3px solid #34d399'>";
-    h+="<div class='st'>Monatsblick (aktuelle Woche)</div>";
-    h+="<div style='font-size:40px;font-weight:800;color:#34d399'>&#8364;"+weekTotal().toLocaleString()+"</div></div>";
-    for(var ui=0;ui<USERS.length;ui++){
-      var user=USERS[ui],uc=UCOL[user];
-      h+="<div class='card' style='border-left:4px solid "+uc+"'>";
-      h+="<div style='font-size:14px;font-weight:700;color:"+uc+";margin-bottom:12px'>"+user+"</div>";
-      for(var ti=0;ti<TASKS.length;ti++){
-        var task=TASKS[ti],taskDone=0;
-        for(var di=0;di<7;di++){
-          if(task.hasCount){taskDone+=Math.min(task.goal,DATA.chk[di+"_"+user+"_"+task.id+"_v"]||0);}
-          else{if(DATA.chk[di+"_"+user+"_"+task.id])taskDone++;}
-        }
-        var taskMax=task.hasCount?task.goal*7:7,tpct=taskMax>0?Math.round((taskDone/taskMax)*100):0;
-        h+="<div style='margin-bottom:8px'>";
-        h+="<div style='display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px'>";
-        h+="<span style='color:#888'>"+task.label+"</span><span style='color:"+uc+";font-weight:600'>"+taskDone+"/"+taskMax+"</span></div>";
-        h+="<div class='bbg'><div class='bb' style='background:"+uc+";width:"+tpct+"%'></div></div></div>";
+    h+="<div class='st'>"+monthLabel(cSelMonth)+" - Einnahmen</div>";
+    if(monthWeeks.indexOf(W)!==-1){
+      monthTotal+=weekTotal();
+    }
+    h+="<div style='font-size:40px;font-weight:800;color:"+(monthTotal>0?"#34d399":"#444")+"'>&#8364;"+monthTotal.toLocaleString()+"</div>";
+    if(monthWeeks.length>1)h+="<div style='font-size:11px;color:#555;margin-top:4px'>Nur aktuelle Woche zaehlt in Echtzeit</div>";
+    h+="</div>";
+
+    // Week breakdown for month
+    h+="<div class='st'>Wochen</div>";
+    for(var wi=0;wi<monthWeeks.length;wi++){
+      var wk=monthWeeks[wi],rev=REVIEWS[wk]||{};
+      h+="<div class='card' style='border-left:3px solid "+(rev.done?"#34d399":"#2a2a2a")+"'>";
+      h+="<div style='display:flex;justify-content:space-between;align-items:center'>";
+      h+="<div style='font-size:13px;font-weight:700;color:#888'>"+weekKeyToLabel(wk)+(wk===W?" <span style='font-size:10px;color:#60a5fa'>Aktuell</span>":"")+"</div>";
+      if(rev.done)h+="<span style='font-size:10px;color:#34d399'>Fertig</span>";
+      h+="</div>";
+      var hasSummary=rev.good||rev.bad||rev.change;
+      if(hasSummary){
+        var goodVal=rev.good||"";
+        if(goodVal)h+="<div style='font-size:12px;color:#555;margin-top:6px;line-height:1.5'>"+goodVal.substring(0,100)+(goodVal.length>100?"...":"")+"</div>";
+      }else{
+        h+="<div style='font-size:11px;color:#333;margin-top:4px'>Kein Rueckblick</div>";
       }
       h+="</div>";
+    }
+
+    // Stats for current week in this month
+    if(monthWeeks.indexOf(W)!==-1){
+      h+="<div class='st' style='margin-top:4px'>Aufgaben diese Woche</div>";
+      for(var ui=0;ui<USERS.length;ui++){
+        var user=USERS[ui],uc=UCOL[user];
+        h+="<div class='card' style='border-left:4px solid "+uc+"'>";
+        h+="<div style='font-size:14px;font-weight:700;color:"+uc+";margin-bottom:10px'>"+user+"</div>";
+        for(var ti=0;ti<TASKS.length;ti++){
+          var task=TASKS[ti],taskDone=0;
+          for(var di=0;di<7;di++){
+            if(task.hasCount){taskDone+=Math.min(task.goal,DATA.chk[di+"_"+user+"_"+task.id+"_v"]||0);}
+            else{if(DATA.chk[di+"_"+user+"_"+task.id])taskDone++;}
+          }
+          var taskMax=task.hasCount?task.goal*7:7,tpct=taskMax>0?Math.round((taskDone/taskMax)*100):0;
+          h+="<div style='margin-bottom:8px'>";
+          h+="<div style='display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px'>";
+          h+="<span style='color:#888'>"+task.label+"</span><span style='color:"+uc+";font-weight:600'>"+taskDone+"/"+taskMax+"</span></div>";
+          h+="<div class='bbg'><div class='bb' style='background:"+uc+";width:"+tpct+"%'></div></div></div>";
+        }
+        h+="</div>";
+      }
     }
   }
 
@@ -884,6 +1006,8 @@ window.addProduct=addProduct;window.saveProductField=saveProductField;window.del
 window.addPipeline=addPipeline;window.savePipeField=savePipeField;window.setPipeStage=setPipeStage;window.stageHTML=stageHTML;window.deletePipeline=deletePipeline;
 window.resetDay=resetDay;window.resetWeek=resetWeek;
 window.saveReview=saveReview;
+window.markReviewDone=markReviewDone;
+window.deleteReview=deleteReview;
 
 var d=new Date(),dy=d.getDay();
 var map={1:0,2:1,3:2,4:3,5:4,6:5,0:6};
