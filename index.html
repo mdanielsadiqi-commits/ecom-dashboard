@@ -257,11 +257,24 @@ function wlHTML(){
 function addWL(){
   var input=document.getElementById("wl_input");if(!input)return;
   var val=input.value.trim();if(!val)return;
+  if(!DATA.watchlist)DATA.watchlist=[];
   DATA.watchlist.push({text:val,done:false});saveGlobal();input.value="";
+  var el=document.getElementById("wl_list");
+  if(el)el.innerHTML=wlHTML();
+  else render();
+}
+function toggleWL(idx){
+  if(!DATA.watchlist||!DATA.watchlist[idx])return;
+  DATA.watchlist[idx].done=!DATA.watchlist[idx].done;saveGlobal();
   var el=document.getElementById("wl_list");if(el)el.innerHTML=wlHTML();
 }
-function toggleWL(idx){DATA.watchlist[idx].done=!DATA.watchlist[idx].done;saveGlobal();var el=document.getElementById("wl_list");if(el)el.innerHTML=wlHTML();}
-function removeWL(idx){DATA.watchlist.splice(idx,1);saveGlobal();var el=document.getElementById("wl_list");if(el)el.innerHTML=wlHTML();}
+function removeWL(idx){
+  if(!DATA.watchlist)return;
+  DATA.watchlist.splice(idx,1);saveGlobal();
+  var el=document.getElementById("wl_list");
+  if(el)el.innerHTML=wlHTML();
+  else render();
+}
 
 // Ideas
 function ideasHTML(){
