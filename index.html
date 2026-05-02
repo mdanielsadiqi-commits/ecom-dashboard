@@ -464,13 +464,14 @@ function renderDay(){
   }
   h+="</div>";
 
-  // Watchlist mini
+  // Watchlist - input only, no list shown in day
   h+="<div class='card' style='border-top:3px solid #a78bfa'>";
-  h+="<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px'>";
+  h+="<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:8px'>";
   h+="<div class='st' style='margin-bottom:0'>Produkte im Auge behalten</div>";
-  h+="<button onclick='setTab(\"products\")' style='font-size:11px;padding:4px 10px;border-radius:20px;background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa44'>Alle</button>";
-  h+="</div><div id='wl_list'>"+wlHTML()+"</div>";
-  h+="<div style='display:flex;gap:8px;margin-top:10px'>";
+  h+="<button onclick='setTab(\"products\");cProdSection=\"watchlist\"' style='font-size:11px;padding:4px 10px;border-radius:20px;background:#a78bfa22;color:#a78bfa;border:1px solid #a78bfa44'>Liste ansehen</button>";
+  h+="</div>";
+  h+="<div style='font-size:12px;color:#555;margin-bottom:8px'>Eintrag wird direkt in der Watchlist gespeichert</div>";
+  h+="<div style='display:flex;gap:8px'>";
   h+="<input id='wl_input' class='clinput' placeholder='Produktname oder Link...' onkeydown='if(event.keyCode===13)addWL()'/>";
   h+="<button onclick='addWL()' style='background:#a78bfa22;border:1px solid #a78bfa44;border-radius:8px;padding:8px 14px;color:#a78bfa;font-size:14px'>+</button>";
   h+="</div></div>";
@@ -488,23 +489,22 @@ function renderDay(){
   return h;
 }
 
-// PRODUCTS TAB
+// PRODUCTS TAB - 3 sections: Research / Aktive Produkte / Watchlist
 function renderProducts(){
   var h="<div class='nav'><div style='flex:1;text-align:center;font-size:16px;font-weight:700'>Produkte</div></div>";
-  h+="<div style='display:flex;gap:8px;padding:12px 16px 0'>";
+  h+="<div style='display:flex;gap:6px;padding:12px 16px 0'>";
   h+="<button class='dbtn"+(cProdSection==="research"?" active":"")+"' onclick='cProdSection=\"research\";render()'>Research</button>";
   h+="<button class='dbtn"+(cProdSection==="pipeline"?" active":"")+"' onclick='cProdSection=\"pipeline\";render()'>Aktive Produkte</button>";
+  h+="<button class='dbtn"+(cProdSection==="watchlist"?" active":"")+"' onclick='cProdSection=\"watchlist\";render()'>Watchlist</button>";
   h+="</div><div class='page'>";
 
   if(cProdSection==="research"){
-    // Add product
     h+="<div class='card' style='border-top:3px solid #a78bfa'>";
     h+="<div class='st'>Neues Produkt hinzufuegen</div>";
     h+="<div style='display:flex;gap:8px'>";
     h+="<input id='prod_name' class='clinput' placeholder='Produktname...' onkeydown='if(event.keyCode===13)addProduct()'/>";
     h+="<button onclick='addProduct()' style='background:#a78bfa22;border:1px solid #a78bfa44;border-radius:8px;padding:8px 14px;color:#a78bfa;font-size:14px'>+</button>";
     h+="</div></div>";
-
     if(!DATA.products||!DATA.products.length){
       h+="<div style='text-align:center;color:#333;padding:30px 0;font-size:14px'>Noch keine Produkte</div>";
     }else{
@@ -531,7 +531,6 @@ function renderProducts(){
     h+="<input id='pp_name' class='clinput' placeholder='Produktname...' onkeydown='if(event.keyCode===13)addPipeline()'/>";
     h+="<button onclick='addPipeline()' style='background:#34d39922;border:1px solid #34d39944;border-radius:8px;padding:8px 14px;color:#34d399;font-size:14px'>+</button>";
     h+="</div></div>";
-
     if(!DATA.pipeline||!DATA.pipeline.length){
       h+="<div style='text-align:center;color:#333;padding:30px 0;font-size:14px'>Noch keine aktiven Produkte</div>";
     }else{
@@ -550,6 +549,18 @@ function renderProducts(){
       }
     }
   }
+
+  if(cProdSection==="watchlist"){
+    h+="<div class='card' style='border-top:3px solid #a78bfa'>";
+    h+="<div class='st'>Watchlist</div>";
+    h+="<div style='font-size:12px;color:#555;margin-bottom:10px'>Auch direkt vom Tag aus hinzufuegbar</div>";
+    h+="<div id='wl_list'>"+wlHTML()+"</div>";
+    h+="<div style='display:flex;gap:8px;margin-top:10px'>";
+    h+="<input id='wl_input' class='clinput' placeholder='Produktname oder Link...' onkeydown='if(event.keyCode===13)addWL()'/>";
+    h+="<button onclick='addWL()' style='background:#a78bfa22;border:1px solid #a78bfa44;border-radius:8px;padding:8px 14px;color:#a78bfa;font-size:14px'>+</button>";
+    h+="</div></div>";
+  }
+
   h+="</div>";
   return h;
 }
