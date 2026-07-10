@@ -248,9 +248,24 @@ function saveWeek(){
       .then(()=>setSync("ok")).catch(()=>setSync("error"));
   },600);
 }
-const saveCfg    = () => { setSync("syncing"); db.collection("config").doc("app").set(S.cfg).then(()=>setSync("ok")).catch(()=>setSync("error")); };
+let cfgTimer=null, hubTimer=null;
+function saveCfg(){
+  setSync("syncing");
+  clearTimeout(cfgTimer);
+  cfgTimer=setTimeout(()=>{
+    db.collection("config").doc("app").set(S.cfg)
+      .then(()=>setSync("ok")).catch(()=>setSync("error"));
+  },500);
+}
 const saveStamps = () => { if(S.stamps) db.collection("config").doc("stamps").set(S.stamps).catch(()=>setSync("error")); };
-const saveHub    = () => { setSync("syncing"); db.collection("config").doc("hub").set(S.hub).then(()=>setSync("ok")).catch(()=>setSync("error")); };
+function saveHub(){
+  setSync("syncing");
+  clearTimeout(hubTimer);
+  hubTimer=setTimeout(()=>{
+    db.collection("config").doc("hub").set(S.hub)
+      .then(()=>setSync("ok")).catch(()=>setSync("error"));
+  },500);
+}
 let reviewTimer=null;
 function saveReview(){
   setSync("syncing");
@@ -264,6 +279,14 @@ function setSync(state){
   document.querySelectorAll(".sync-dot").forEach(d=>{
     d.className="sync-dot"+(state==="syncing"?" syncing":state==="error"?" error":"");
   });
+}
+
+function fieldIsBeingEdited(type){
+  const el=document.activeElement;
+  if(!el || !el.dataset) return false;
+  if(type==="config") return el.dataset.f==="taskField" || el.dataset.f==="bizName";
+  if(type==="hub") return el.dataset.f==="hub";
+  return false;
 }
 
 function boot(){
@@ -282,7 +305,7 @@ function boot(){
       if(Array.isArray(d.tasks)&&d.tasks.length) S.cfg.tasks=d.tasks;
       if(Array.isArray(d.businesses)&&d.businesses.length) S.cfg.businesses=d.businesses;
     }
-    render();
+    if(!fieldIsBeingEdited("config")) render();
   });
 
   db.collection("config").doc("stamps").onSnapshot(snap=>{
@@ -297,7 +320,7 @@ function boot(){
       const d=snap.data();
       HUB_SECTIONS.forEach(sec=>{ S.hub[sec.key]=Array.isArray(d[sec.key])?d[sec.key]:[]; });
     }
-    render();
+    if(!fieldIsBeingEdited("hub")) render();
   });
 
   db.collection("reviews").doc(S.W).onSnapshot(snap=>{
