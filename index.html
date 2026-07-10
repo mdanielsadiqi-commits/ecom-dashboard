@@ -566,15 +566,18 @@ const F = {
   bizName(el,d){ if(S.cfg.businesses[+d.idx]){ S.cfg.businesses[+d.idx].name=el.value; saveCfg(); } },
   taskField(el,d){
     const t=S.cfg.tasks[+d.idx]; if(!t) return;
-    if(d.f==="goal") t.goal=Math.max(2,+el.value||2);
-    else t[d.f]=el.value;
+    const field=d.field;
+    if(field==="goal") t.goal=Math.max(2,+el.value||2);
+    else if(field) t[field]=el.value;
     saveCfg();
   },
   review(el,d){ if(!S.review) S.review={}; S.review[d.f]=el.value; saveReview(); },
   hub(el,d){
     const e=S.hub[d.sec].find(x=>x.id===d.id); if(!e) return;
-    e[d.f]=el.value; saveHub();
-    if(d.f==="status") render();
+    const field=d.field;
+    if(!field) return;
+    e[field]=el.value; saveHub();
+    if(field==="status") render();
   }
 };
 
@@ -586,6 +589,12 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("change",e=>{
   const el=e.target.closest("[data-f]");
+  if(!el) return;
+  const fn=F[el.dataset.f];
+  if(fn) fn(el,el.dataset);
+});
+document.addEventListener("input",e=>{
+  const el=e.target.closest('input[data-f="taskField"], textarea[data-f="hub"], input[data-f="hub"]');
   if(!el) return;
   const fn=F[el.dataset.f];
   if(fn) fn(el,el.dataset);
