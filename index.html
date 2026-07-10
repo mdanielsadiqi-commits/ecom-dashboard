@@ -453,7 +453,7 @@ const A = {
   },
   bizDel(d){
     const b=S.cfg.businesses[+d.idx]; if(!b) return;
-    if(!confirm("„"+b.name+"" entfernen? Historische Einnahmen bleiben in den Summen erhalten.")) return;
+    if(!confirm("„"+b.name+"“ entfernen? Historische Einnahmen bleiben in den Summen erhalten.")) return;
     S.cfg.businesses.splice(+d.idx,1);
     saveCfg(); render();
   },
@@ -488,7 +488,7 @@ const A = {
   hubDel(d){
     const arr=S.hub[d.sec], i=arr.findIndex(x=>x.id===d.id);
     if(i<0) return;
-    if(!confirm("„"+(arr[i].name||arr[i].label||"Eintrag")+"" löschen?")) return;
+    if(!confirm("„"+(arr[i].name||arr[i].label||"Eintrag")+"“ löschen?")) return;
     arr.splice(i,1); saveHub(); render();
   },
   goalToggle(d){
@@ -500,7 +500,7 @@ const A = {
   taskAdd(){ S.cfg.tasks.push({id:uid("t"),label:"Neue Aufgabe",sub:"",color:PALETTE[S.cfg.tasks.length%PALETTE.length]}); saveCfg(); render(); },
   taskDel(d){
     const t=S.cfg.tasks[+d.idx]; if(!t) return;
-    if(!confirm("Aufgabe „"+t.label+"" löschen?")) return;
+    if(!confirm("Aufgabe „"+t.label+"“ löschen?")) return;
     S.cfg.tasks.splice(+d.idx,1); saveCfg(); render();
   },
   taskPause(d){ const t=S.cfg.tasks[+d.idx]; if(t){ t.paused=!t.paused; saveCfg(); render(); } },
